@@ -10,6 +10,7 @@ import * from "io";
 import * from "$PFUN_HOME/lib/htmllib";
 import * from "$PFUN_HOME/lib/viewlib";
 import * from "$PFUN_HOME/lib/tea";
+import * from "./engine/dice";
 import * from "./character/abilities";
 import * from "./character/character";
 import * from "./character/rules";
@@ -36,7 +37,7 @@ function noCmd(model) {
 function defaultSelection() {
   BuilderSelection(
     activeTab = "builder",
-    builderStep = IdentityStep,
+    builderStep = "identity",
     equipmentCategory = "weapons",
     equipmentSearch = "",
     expandedSections = ["identity", "abilities", "equipment"],
@@ -48,12 +49,18 @@ function defaultSelection() {
     standardIntelligence = "",
     standardWisdom = "",
     standardCharisma = "",
+    scoreSlotOne = "",
+    scoreSlotTwo = "",
+    scoreSlotThree = "",
+    scoreSlotFour = "",
+    scoreSlotFive = "",
+    scoreSlotSix = "",
     backgroundBonusMode = "plus-two-plus-one",
     backgroundBonusPrimary = "dex",
     backgroundBonusSecondary = "con",
     backgroundBonusTertiary = "int",
     rollMode = "4d6-drop-lowest",
-    rollSeed = "",
+    rollSeed = "8675309",
     rollSummary = "No rolls yet"
   );
 }
@@ -239,18 +246,18 @@ function selectedDocument(model) {
 }
 
 function setSelectionTab(selection, value) {
-  makeSelection(selection, value, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, value, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
 function setSelectionBuilderStep(selection, value) {
-  makeSelection(selection, selection.activeTab, value, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, value, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
 function setSelectionEquipmentCategory(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, value, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, selection.builderStep, value, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
-function makeSelection(selection, activeTab, builderStep, equipmentCategory, equipmentSearch, expandedSections, abilityMethod, standardSelectedScore, standardStrength, standardDexterity, standardConstitution, standardIntelligence, standardWisdom, standardCharisma, backgroundBonusMode, backgroundBonusPrimary, backgroundBonusSecondary, backgroundBonusTertiary, rollMode, rollSeed, rollSummary) {
+function makeSelection(selection, activeTab, builderStep, equipmentCategory, equipmentSearch, expandedSections, abilityMethod, standardSelectedScore, standardStrength, standardDexterity, standardConstitution, standardIntelligence, standardWisdom, standardCharisma, scoreSlotOne, scoreSlotTwo, scoreSlotThree, scoreSlotFour, scoreSlotFive, scoreSlotSix, backgroundBonusMode, backgroundBonusPrimary, backgroundBonusSecondary, backgroundBonusTertiary, rollMode, rollSeed, rollSummary) {
   BuilderSelection(
     activeTab = activeTab,
     builderStep = builderStep,
@@ -265,6 +272,12 @@ function makeSelection(selection, activeTab, builderStep, equipmentCategory, equ
     standardIntelligence = standardIntelligence,
     standardWisdom = standardWisdom,
     standardCharisma = standardCharisma,
+    scoreSlotOne = scoreSlotOne,
+    scoreSlotTwo = scoreSlotTwo,
+    scoreSlotThree = scoreSlotThree,
+    scoreSlotFour = scoreSlotFour,
+    scoreSlotFive = scoreSlotFive,
+    scoreSlotSix = scoreSlotSix,
     backgroundBonusMode = backgroundBonusMode,
     backgroundBonusPrimary = backgroundBonusPrimary,
     backgroundBonusSecondary = backgroundBonusSecondary,
@@ -276,75 +289,167 @@ function makeSelection(selection, activeTab, builderStep, equipmentCategory, equ
 }
 
 function setSelectionEquipmentSearch(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, value, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, value, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
 function setSelectionAbilityMethod(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, value, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, value, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
 
 function setSelectionStandardSelectedScore(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, value, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, value, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
-function setSelectionStandardAssignment(selection, ability, value) {
-  let str = ability == Strength ? value : selection.standardStrength;
-  let dex = ability == Dexterity ? value : selection.standardDexterity;
-  let con = ability == Constitution ? value : selection.standardConstitution;
-  let intv = ability == Intelligence ? value : selection.standardIntelligence;
-  let wis = ability == Wisdom ? value : selection.standardWisdom;
-  let cha = ability == Charisma ? value : selection.standardCharisma;
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", str, dex, con, intv, wis, cha, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
-}
+function slotOneId() { "slot-1"; }
+function slotTwoId() { "slot-2"; }
+function slotThreeId() { "slot-3"; }
+function slotFourId() { "slot-4"; }
+function slotFiveId() { "slot-5"; }
+function slotSixId() { "slot-6"; }
 
-function selectedStandardScoreInt(selection) {
-  intFromText(selection.standardSelectedScore);
-}
-
-function assignSelectedStandardScore(character, ability, selection) {
-  if selection.standardSelectedScore == "" then
-    character
+function scoreSlotValue(selection, slotId) {
+  if slotId == slotOneId() then
+    selection.scoreSlotOne
+  else if slotId == slotTwoId() then
+    selection.scoreSlotTwo
+  else if slotId == slotThreeId() then
+    selection.scoreSlotThree
+  else if slotId == slotFourId() then
+    selection.scoreSlotFour
+  else if slotId == slotFiveId() then
+    selection.scoreSlotFive
+  else if slotId == slotSixId() then
+    selection.scoreSlotSix
   else
-    setScoreWithBackgroundBonuses(character, ability, selectedStandardScoreInt(selection), selection);
+    "";
 }
 
-function setSelectionBackgroundBonusMode(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, value, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+function scoreSlotInt(selection, slotId) {
+  intFromText(scoreSlotValue(selection, slotId));
 }
 
-function setSelectionBackgroundBonusPrimary(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, value, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+function assignedSlotForAbility(selection, ability) {
+  if ability == Strength then
+    selection.standardStrength
+  else if ability == Dexterity then
+    selection.standardDexterity
+  else if ability == Constitution then
+    selection.standardConstitution
+  else if ability == Intelligence then
+    selection.standardIntelligence
+  else if ability == Wisdom then
+    selection.standardWisdom
+  else
+    selection.standardCharisma;
 }
 
-function setSelectionBackgroundBonusSecondary(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, value, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+function setAssignedSlotForAbility(selection, ability, slotId) {
+  let str = ability == Strength ? slotId : selection.standardStrength;
+  let dex = ability == Dexterity ? slotId : selection.standardDexterity;
+  let con = ability == Constitution ? slotId : selection.standardConstitution;
+  let intv = ability == Intelligence ? slotId : selection.standardIntelligence;
+  let wis = ability == Wisdom ? slotId : selection.standardWisdom;
+  let cha = ability == Charisma ? slotId : selection.standardCharisma;
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", str, dex, con, intv, wis, cha, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
-function setSelectionBackgroundBonusTertiary(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, value, selection.rollMode, selection.rollSeed, selection.rollSummary);
+function clearSlotAssignment(selection, slotId) {
+  let str = selection.standardStrength == slotId ? "" : selection.standardStrength;
+  let dex = selection.standardDexterity == slotId ? "" : selection.standardDexterity;
+  let con = selection.standardConstitution == slotId ? "" : selection.standardConstitution;
+  let intv = selection.standardIntelligence == slotId ? "" : selection.standardIntelligence;
+  let wis = selection.standardWisdom == slotId ? "" : selection.standardWisdom;
+  let cha = selection.standardCharisma == slotId ? "" : selection.standardCharisma;
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, str, dex, con, intv, wis, cha, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
 
-function setSelectionRollMode(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, value, selection.rollSeed, selection.rollSummary);
+function clearAbilityAssignment(selection, ability) {
+  setAssignedSlotForAbility(selection, ability, "");
 }
 
-function setSelectionRollSeed(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, value, selection.rollSummary);
+function assignSelectedScoreSlot(selection, ability) {
+  let selected = selection.standardSelectedScore;
+  let currentlyAssigned = assignedSlotForAbility(selection, ability);
+  if selected == "" then {
+    if currentlyAssigned == "" then
+      selection
+    else
+      clearAbilityAssignment(selection, ability);
+  } else {
+    let withoutSelected = clearSlotAssignment(selection, selected);
+    setAssignedSlotForAbility(withoutSelected, ability, selected);
+  }
 }
 
-function setSelectionRollSummary(selection, value) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, value);
+function selectionWithScoreSlots(selection, s1, s2, s3, s4, s5, s6, summary) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", "", "", "", "", "", "", __str__(s1), __str__(s2), __str__(s3), __str__(s4), __str__(s5), __str__(s6), selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, summary);
 }
 
+function standardArraySelection(selection) {
+  selectionWithScoreSlots(selection, 15, 14, 13, 12, 10, 8, "Standard array ready");
+}
+
+function rolledScoreSelection(selection, scores, summary) {
+  selectionWithScoreSlots(selection, scores.strength, scores.dexterity, scores.constitution, scores.intelligence, scores.wisdom, scores.charisma, summary);
+}
 
 function standardArrayDefaultSelection(selection) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", "15", "14", "13", "12", "10", "8", selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", slotOneId(), slotTwoId(), slotThreeId(), slotFourId(), slotFiveId(), slotSixId(), "15", "14", "13", "12", "10", "8", selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, "Standard array applied");
 }
 
 function clearStandardArraySelection(selection) {
-  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", "", "", "", "", "", "", selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", "", "", "", "", "", "", "", "", "", "", "", "", selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
 }
+
+function scoresFromAssignments(selection) {
+  AbilityScores(
+    strength = selection.standardStrength == "" ? 8 : scoreSlotInt(selection, selection.standardStrength),
+    dexterity = selection.standardDexterity == "" ? 8 : scoreSlotInt(selection, selection.standardDexterity),
+    constitution = selection.standardConstitution == "" ? 8 : scoreSlotInt(selection, selection.standardConstitution),
+    intelligence = selection.standardIntelligence == "" ? 8 : scoreSlotInt(selection, selection.standardIntelligence),
+    wisdom = selection.standardWisdom == "" ? 8 : scoreSlotInt(selection, selection.standardWisdom),
+    charisma = selection.standardCharisma == "" ? 8 : scoreSlotInt(selection, selection.standardCharisma)
+  );
+}
+
+function applyAssignmentSelection(character, selection) {
+  applyScoresWithBackgroundBonuses(character, scoresFromAssignments(selection), selection);
+}
+
+function assignSelectedStandardScore(character, ability, selection) {
+  let nextSelection = assignSelectedScoreSlot(selection, ability);
+  applyAssignmentSelection(character, nextSelection);
+}
+
+function setSelectionBackgroundBonusMode(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, value, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBackgroundBonusPrimary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, value, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBackgroundBonusSecondary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, value, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBackgroundBonusTertiary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, value, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionRollMode(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, value, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionRollSeed(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, value, selection.rollSummary);
+}
+
+function setSelectionRollSummary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.scoreSlotOne, selection.scoreSlotTwo, selection.scoreSlotThree, selection.scoreSlotFour, selection.scoreSlotFive, selection.scoreSlotSix, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, value);
+}
+
 
 function applyScoresToCharacter(character, scores) {
   let c1 = setAbilityScore(character, Strength, scores.strength);
@@ -444,23 +549,152 @@ function intFromText(text) {
 
 function builderStepFromText(value) {
   if value == "identity" then
-    IdentityStep
+    "identity"
   else if value == "species-options" then
-    SpeciesOptionsStep
+    "species-options"
   else if value == "class-options" then
-    ClassOptionsStep
+    "class-options"
   else if value == "abilities" then
-    AbilitiesStep
+    "abilities"
   else if value == "equipment" then
-    EquipmentStep
+    "equipment"
   else
-    ReviewStep;
+    "review";
+}
+
+
+type ScoreRoll = { rng, value }
+type AbilityRollResult = { rng, scores, summary }
+
+function minInt(a, b) {
+  a < b ? a : b;
+}
+
+function minFour(a, b, c, d) {
+  minInt(minInt(a, b), minInt(c, d));
+}
+
+function safeSeed(text) {
+  text == "" ? 8675309 : toInt(toFloat(text));
+}
+
+function rollD6From(rng) {
+  rollDieOfSize(rng, 6);
+}
+
+function rollD6Reroll1From(rng) {
+  let r = rollD6From(rng);
+  if r.value <= 1 then
+    rollD6Reroll1From(r.rng)
+  else
+    r;
+}
+
+function rollD6Reroll12From(rng) {
+  let r = rollD6From(rng);
+  if r.value <= 2 then
+    rollD6Reroll12From(r.rng)
+  else
+    r;
+}
+
+function roll3d6ScoreFrom(rng) {
+  let a = rollD6From(rng);
+  let b = rollD6From(a.rng);
+  let c = rollD6From(b.rng);
+  ScoreRoll(rng = c.rng, value = a.value + b.value + c.value);
+}
+
+function roll4d6DropLowestScoreFrom(rng) {
+  let a = rollD6From(rng);
+  let b = rollD6From(a.rng);
+  let c = rollD6From(b.rng);
+  let d = rollD6From(c.rng);
+  ScoreRoll(rng = d.rng, value = a.value + b.value + c.value + d.value - minFour(a.value, b.value, c.value, d.value));
+}
+
+function roll4d6Reroll1ScoreFrom(rng) {
+  let a = rollD6Reroll1From(rng);
+  let b = rollD6Reroll1From(a.rng);
+  let c = rollD6Reroll1From(b.rng);
+  let d = rollD6Reroll1From(c.rng);
+  ScoreRoll(rng = d.rng, value = a.value + b.value + c.value + d.value - minFour(a.value, b.value, c.value, d.value));
+}
+
+function roll4d6Reroll12ScoreFrom(rng) {
+  let a = rollD6Reroll12From(rng);
+  let b = rollD6Reroll12From(a.rng);
+  let c = rollD6Reroll12From(b.rng);
+  let d = rollD6Reroll12From(c.rng);
+  ScoreRoll(rng = d.rng, value = a.value + b.value + c.value + d.value - minFour(a.value, b.value, c.value, d.value));
+}
+
+function roll2d6Plus6ScoreFrom(rng) {
+  let a = rollD6From(rng);
+  let b = rollD6From(a.rng);
+  ScoreRoll(rng = b.rng, value = a.value + b.value + 6);
+}
+
+function rollScoreByModeFrom(rng, mode) {
+  if mode == "3d6" then
+    roll3d6ScoreFrom(rng)
+  else if mode == "2d6-plus-6" then
+    roll2d6Plus6ScoreFrom(rng)
+  else if mode == "4d6-reroll-ones" then
+    roll4d6Reroll1ScoreFrom(rng)
+  else if mode == "4d6-reroll-one-two" then
+    roll4d6Reroll12ScoreFrom(rng)
+  else
+    roll4d6DropLowestScoreFrom(rng);
+}
+
+function rollModeSummary(mode) {
+  if mode == "3d6" then
+    "3d6 in order"
+  else if mode == "2d6-plus-6" then
+    "2d6 + 6"
+  else if mode == "4d6-reroll-ones" then
+    "4d6 drop lowest, rerolling 1s"
+  else if mode == "4d6-reroll-one-two" then
+    "4d6 drop lowest, rerolling 1s and 2s"
+  else
+    "4d6 drop lowest";
+}
+
+function rollAbilityScoresFromSeed(mode, seedText) {
+  let start = Rng { seed = safeSeed(seedText) };
+  let str = rollScoreByModeFrom(start, mode);
+  let dex = rollScoreByModeFrom(str.rng, mode);
+  let con = rollScoreByModeFrom(dex.rng, mode);
+  let intv = rollScoreByModeFrom(con.rng, mode);
+  let wis = rollScoreByModeFrom(intv.rng, mode);
+  let cha = rollScoreByModeFrom(wis.rng, mode);
+  let scores = AbilityScores(
+    strength = str.value,
+    dexterity = dex.value,
+    constitution = con.value,
+    intelligence = intv.value,
+    wisdom = wis.value,
+    charisma = cha.value
+  );
+  AbilityRollResult(
+    rng = cha.rng,
+    scores = scores,
+    summary = rollModeSummary(mode) + ": " + __str__(str.value) + ", " + __str__(dex.value) + ", " + __str__(con.value) + ", " + __str__(intv.value) + ", " + __str__(wis.value) + ", " + __str__(cha.value)
+  );
+}
+
+function assignAbilityResult(model, character, ability, label) {
+  let selection = assignSelectedScoreSlot(model.selection, ability);
+  let nextCharacter = applyAssignmentSelection(character, selection);
+  withModel(model, nextCharacter, model.turn, label + " assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
 }
 
 proc update(msg, model) {
   let character = model.character;
   let build = character.build;
   match msg with
+  | NoOp -> noCmd(model)
   | NewCharacter -> {
       let currentDocs = syncedDocuments(model, model.character, model.turn);
       let doc = newCharacterDocument(currentDocs);
@@ -487,9 +721,10 @@ proc update(msg, model) {
   | SetName p -> withCharacter(model, setName(character, fieldText(p)), "Name updated")
   | SetGender p -> withCharacter(model, setGender(character, genderFromId(fieldText(p))), "Gender updated")
   | SuggestName -> {
-      var suggestion = suggestCharacterNameRandom(build.species, build.identity.gender);
+      let suggestion = suggestCharacterName(Rng { seed = safeSeed(model.selection.rollSeed) }, build.species, build.identity.gender);
       let named = suggestion.name == "" ? character : setName(character, suggestion.name);
-      let nextSelection = setSelectionRollSummary(model.selection, suggestion.status);
+      let withSeed = setSelectionRollSeed(model.selection, __str__(suggestion.rng.seed));
+      let nextSelection = setSelectionRollSummary(withSeed, suggestion.status);
       withModel(model, named, model.turn, suggestion.status, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, nextSelection);
     }
   | SelectSpecies p -> {
@@ -639,27 +874,27 @@ proc update(msg, model) {
       withSelection(model, selection, "Builder step changed");
     }
   | GoIdentity -> {
-      let selection = setSelectionBuilderStep(model.selection, IdentityStep);
+      let selection = setSelectionBuilderStep(model.selection, "identity");
       withSelection(model, selection, "Builder step changed");
     }
   | GoSpeciesOptions -> {
-      let selection = setSelectionBuilderStep(model.selection, SpeciesOptionsStep);
+      let selection = setSelectionBuilderStep(model.selection, "species-options");
       withSelection(model, selection, "Builder step changed");
     }
   | GoClassOptions -> {
-      let selection = setSelectionBuilderStep(model.selection, ClassOptionsStep);
+      let selection = setSelectionBuilderStep(model.selection, "class-options");
       withSelection(model, selection, "Builder step changed");
     }
   | GoAbilities -> {
-      let selection = setSelectionBuilderStep(model.selection, AbilitiesStep);
+      let selection = setSelectionBuilderStep(model.selection, "abilities");
       withSelection(model, selection, "Builder step changed");
     }
   | GoEquipment -> {
-      let selection = setSelectionBuilderStep(model.selection, EquipmentStep);
+      let selection = setSelectionBuilderStep(model.selection, "equipment");
       withSelection(model, selection, "Builder step changed");
     }
   | GoReview -> {
-      let selection = setSelectionBuilderStep(model.selection, ReviewStep);
+      let selection = setSelectionBuilderStep(model.selection, "review");
       withSelection(model, selection, "Builder step changed");
     }
   | SetEquipmentCategory p -> {
@@ -671,7 +906,8 @@ proc update(msg, model) {
       withSelection(model, selection, "Equipment search edited");
     }
   | SetAbilityMethod p -> {
-      let selection = setSelectionAbilityMethod(model.selection, fieldText(p));
+      let rawSelection = setSelectionAbilityMethod(model.selection, fieldText(p));
+      let selection = fieldText(p) == "standard-array" ? standardArraySelection(rawSelection) : rawSelection;
       withSelection(model, selection, "Ability method changed");
     }
 
@@ -679,36 +915,12 @@ proc update(msg, model) {
       let selection = setSelectionStandardSelectedScore(model.selection, fieldText(p));
       withSelection(model, selection, "Standard array score selected");
     }
-  | AssignStandardStrength -> {
-      let nextCharacter = assignSelectedStandardScore(character, Strength, model.selection);
-      let selection = setSelectionStandardAssignment(model.selection, Strength, model.selection.standardSelectedScore);
-      withModel(model, nextCharacter, model.turn, "Strength assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
-    }
-  | AssignStandardDexterity -> {
-      let nextCharacter = assignSelectedStandardScore(character, Dexterity, model.selection);
-      let selection = setSelectionStandardAssignment(model.selection, Dexterity, model.selection.standardSelectedScore);
-      withModel(model, nextCharacter, model.turn, "Dexterity assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
-    }
-  | AssignStandardConstitution -> {
-      let nextCharacter = assignSelectedStandardScore(character, Constitution, model.selection);
-      let selection = setSelectionStandardAssignment(model.selection, Constitution, model.selection.standardSelectedScore);
-      withModel(model, nextCharacter, model.turn, "Constitution assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
-    }
-  | AssignStandardIntelligence -> {
-      let nextCharacter = assignSelectedStandardScore(character, Intelligence, model.selection);
-      let selection = setSelectionStandardAssignment(model.selection, Intelligence, model.selection.standardSelectedScore);
-      withModel(model, nextCharacter, model.turn, "Intelligence assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
-    }
-  | AssignStandardWisdom -> {
-      let nextCharacter = assignSelectedStandardScore(character, Wisdom, model.selection);
-      let selection = setSelectionStandardAssignment(model.selection, Wisdom, model.selection.standardSelectedScore);
-      withModel(model, nextCharacter, model.turn, "Wisdom assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
-    }
-  | AssignStandardCharisma -> {
-      let nextCharacter = assignSelectedStandardScore(character, Charisma, model.selection);
-      let selection = setSelectionStandardAssignment(model.selection, Charisma, model.selection.standardSelectedScore);
-      withModel(model, nextCharacter, model.turn, "Charisma assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
-    }
+  | AssignStandardStrength -> assignAbilityResult(model, character, Strength, "Strength")
+  | AssignStandardDexterity -> assignAbilityResult(model, character, Dexterity, "Dexterity")
+  | AssignStandardConstitution -> assignAbilityResult(model, character, Constitution, "Constitution")
+  | AssignStandardIntelligence -> assignAbilityResult(model, character, Intelligence, "Intelligence")
+  | AssignStandardWisdom -> assignAbilityResult(model, character, Wisdom, "Wisdom")
+  | AssignStandardCharisma -> assignAbilityResult(model, character, Charisma, "Charisma")
   | SetBackgroundBonusMode p -> {
       let selection = setSelectionBackgroundBonusMode(model.selection, fieldText(p));
       let next = transitionBackgroundBonuses(character, model.selection, selection);
@@ -752,10 +964,18 @@ proc update(msg, model) {
       withSelection(model, selection, "Roll seed changed");
     }
   | RollAbilityScores -> {
-      var rolled = rollAbilityScoresRandom(model.selection.rollMode);
-      let nextCharacter = applyScoresWithBackgroundBonuses(character, rolled.scores, model.selection);
-      let nextSelection = setSelectionRollSummary(model.selection, join(rolled.lines, " | "));
-      withModel(model, nextCharacter, model.turn, "Rolled ability scores", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, nextSelection);
+      let rolled = rollAbilityScoresFromSeed(model.selection.rollMode, model.selection.rollSeed);
+      let summary = rolled.summary;
+      let withSeed = setSelectionRollSeed(model.selection, __str__(rolled.rng.seed));
+      if model.selection.rollMode == "3d6" then {
+        let nextCharacter = applyScoresWithBackgroundBonuses(character, rolled.scores, withSeed);
+        let nextSelection = clearStandardArraySelection(setSelectionRollSummary(withSeed, summary));
+        withModel(model, nextCharacter, model.turn, "Rolled ability scores in order", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, nextSelection);
+      } else {
+        let nextSelection = rolledScoreSelection(setSelectionRollSummary(withSeed, summary), rolled.scores, summary);
+        let nextCharacter = applyAssignmentSelection(character, nextSelection);
+        withModel(model, nextCharacter, model.turn, "Rolled score pool ready to assign", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, nextSelection);
+      }
     }
   | AddWeaponById p -> {
       let weapon = weaponFromId(model.catalog, fieldText(p), Shortsword);

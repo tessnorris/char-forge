@@ -6,7 +6,6 @@
 
 import * from "../character/character";
 import * from "../engine/dice";
-import * from "$PFUN_HOME/lib/random.pf";
 
 export type SpeciesNamePool = { species, male, female, nonbinary, last }
 export type NameSuggestion = { rng, name, status }
@@ -23,56 +22,16 @@ function pool(species, male, female, nonbinary, last) {
 
 export function namePools() {
   [
-    pool(Aasimar,
-      ["Caelen", "Soriel", "Auren", "Tobiah", "Eliam"],
-      ["Liora", "Auriel", "Seraphel", "Eloria", "Ysolde"],
-      ["Vael", "Oriel", "Sariel", "Noven", "Sevael"],
-      ["Dawnwhisper", "Lightborn", "Everbright", "Starcaller", "Brightveil"]),
-    pool(Dragonborn,
-      ["Rhogar", "Balasar", "Kriv", "Tarhun", "Heskan"],
-      ["Sora", "Kava", "Mishann", "Thava", "Vezera"],
-      ["Sethrix", "Vorel", "Khaaz", "Skarn", "Tazrik"],
-      ["Clethtinthiallor", "Norixius", "Turnuroth", "Baharoosh", "Vrakavor"]),
-    pool(Dwarf,
-      ["Thrum", "Bardin", "Durgan", "Orin", "Morgran"],
-      ["Helga", "Vistra", "Dagna", "Kathra", "Eldeth"],
-      ["Korl", "Brynd", "Ovik", "Balgrim", "Yurin"],
-      ["Ironbeard", "Stonehand", "Deepdelver", "Forgewright", "Hammerfall"]),
-    pool(Elf,
-      ["Aelar", "Varis", "Theren", "Sylvar", "Aramil"],
-      ["Shava", "Lia", "Naevys", "Saelihn", "Vaeril"],
-      ["Aerin", "Sael", "Faen", "Nym", "Ilryn"],
-      ["Moonwhisper", "Silverleaf", "Nightbreeze", "Starwind", "Brightmere"]),
-    pool(Gnome,
-      ["Boddynock", "Fonkin", "Glim", "Zook", "Roondar"],
-      ["Bimpnottin", "Caramip", "Nissa", "Tana", "Breena"],
-      ["Pock", "Zib", "Quill", "Tinkin", "Whirr"],
-      ["Tinklink", "Cogspark", "Fizzlebang", "Quickwick", "Whirligig"]),
-    pool(Goliath,
-      ["Aukan", "Eglath", "Kavaki", "Vimak", "Paavu"],
-      ["Gae-al", "Kuori", "Nalla", "Vaunea", "Anneka"],
-      ["Keothi", "Surek", "Vand", "Kalo", "Uvali"],
-      ["Stonepeak", "Cloudchaser", "Ironwind", "Stormcrest", "Thunderstep"]),
-    pool(Halfling,
-      ["Alton", "Cade", "Eldon", "Milo", "Finnan"],
-      ["Andry", "Bree", "Callie", "Lavinia", "Marigold"],
-      ["Perrin", "Lidda", "Hollin", "Quincey", "Bramble"],
-      ["Goodbarrel", "Underbough", "Tealeaf", "Highhill", "Littlebrook"]),
-    pool(Human,
-      ["Darian", "Marcus", "Aldric", "Joren", "Bram"],
-      ["Mara", "Elise", "Cora", "Talia", "Imara"],
-      ["Ash", "Robin", "Quinn", "Lior", "Vale"],
-      ["Ashford", "Vance", "Hollis", "Thorne", "Mercer"]),
-    pool(Orc,
-      ["Grukk", "Thokk", "Murog", "Karash", "Skarn"],
-      ["Emen", "Yevelda", "Baggi", "Volen", "Drenna"],
-      ["Zogg", "Rukh", "Vasha", "Brakka", "Morv"],
-      ["Skullcleaver", "Bonegnasher", "Bloodtusk", "Ironmaw", "Grimscar"]),
-    pool(Tiefling,
-      ["Damaron", "Iados", "Mordai", "Therai", "Ekemon"],
-      ["Akta", "Nemeia", "Rieta", "Seressa", "Orianna"],
-      ["Mavet", "Ari", "Nyx", "Ember", "Vesh"],
-      ["Nightfall", "Ashveil", "Emberhart", "Duskborn", "Brimstone"])
+    pool(Aasimar, ["Caelen", "Soriel", "Auren", "Tobiah", "Eliam"], ["Liora", "Auriel", "Seraphel", "Eloria", "Ysolde"], ["Vael", "Oriel", "Sariel", "Noven", "Sevael"], ["Dawnwhisper", "Lightborn", "Everbright", "Starcaller", "Brightveil"]),
+    pool(Dragonborn, ["Rhogar", "Balasar", "Kriv", "Tarhun", "Heskan"], ["Sora", "Kava", "Mishann", "Thava", "Vezera"], ["Sethrix", "Vorel", "Khaaz", "Skarn", "Tazrik"], ["Clethtinthiallor", "Norixius", "Turnuroth", "Baharoosh", "Vrakavor"]),
+    pool(Dwarf, ["Thrum", "Bardin", "Durgan", "Orin", "Morgran"], ["Helga", "Vistra", "Dagna", "Kathra", "Eldeth"], ["Korl", "Brynd", "Ovik", "Balgrim", "Yurin"], ["Ironbeard", "Stonehand", "Deepdelver", "Forgewright", "Hammerfall"]),
+    pool(Elf, ["Aelar", "Varis", "Theren", "Sylvar", "Aramil"], ["Shava", "Lia", "Naevys", "Saelihn", "Vaeril"], ["Aerin", "Sael", "Faen", "Nym", "Ilryn"], ["Moonwhisper", "Silverleaf", "Nightbreeze", "Starwind", "Brightmere"]),
+    pool(Gnome, ["Boddynock", "Fonkin", "Glim", "Zook", "Roondar"], ["Bimpnottin", "Caramip", "Nissa", "Tana", "Breena"], ["Pock", "Zib", "Quill", "Tinkin", "Whirr"], ["Tinklink", "Cogspark", "Fizzlebang", "Quickwick", "Whirligig"]),
+    pool(Goliath, ["Aukan", "Eglath", "Kavaki", "Vimak", "Paavu"], ["Gae-al", "Kuori", "Nalla", "Vaunea", "Anneka"], ["Keothi", "Surek", "Vand", "Kalo", "Uvali"], ["Stonepeak", "Cloudchaser", "Ironwind", "Stormcrest", "Thunderstep"]),
+    pool(Halfling, ["Alton", "Cade", "Eldon", "Milo", "Finnan"], ["Andry", "Bree", "Callie", "Lavinia", "Marigold"], ["Perrin", "Lidda", "Hollin", "Quincey", "Bramble"], ["Goodbarrel", "Underbough", "Tealeaf", "Highhill", "Littlebrook"]),
+    pool(Human, ["Darian", "Marcus", "Aldric", "Joren", "Bram"], ["Mara", "Elise", "Cora", "Talia", "Imara"], ["Ash", "Robin", "Quinn", "Lior", "Vale"], ["Ashford", "Vance", "Hollis", "Thorne", "Mercer"]),
+    pool(Orc, ["Grukk", "Thokk", "Murog", "Karash", "Skarn"], ["Emen", "Yevelda", "Baggi", "Volen", "Drenna"], ["Zogg", "Rukh", "Vasha", "Brakka", "Morv"], ["Skullcleaver", "Bonegnasher", "Bloodtusk", "Ironmaw", "Grimscar"]),
+    pool(Tiefling, ["Damaron", "Iados", "Mordai", "Therai", "Ekemon"], ["Akta", "Nemeia", "Rieta", "Seressa", "Orianna"], ["Mavet", "Ari", "Nyx", "Ember", "Vesh"], ["Nightfall", "Ashveil", "Emberhart", "Duskborn", "Brimstone"])
   ];
 }
 
@@ -143,30 +102,4 @@ export function suggestCharacterName(rng, species, gender) {
 
 export function suggestCharacterNameFromSeed(seed, species, gender) {
   suggestCharacterName(Rng { seed }, species, gender);
-}
-
-
-proc randomIndex(values) {
-  if length(values) == 0 then
-    0
-  else
-    randomInt(0, length(values) - 1);
-}
-
-export proc suggestCharacterNameRandom(species, gender) {
-  match speciesNamePool(species) with
-  | Some p -> {
-      let pool = p.value;
-      let firstPool = firstNamesForGender(pool, gender);
-      var firstIndex = randomIndex(firstPool);
-      var lastIndex = randomIndex(pool.last);
-      let firstName = valueAt(firstPool, firstIndex, "Nameless");
-      let lastName = valueAt(pool.last, lastIndex, "Wanderer");
-      NameSuggestion(
-        rng = Rng { seed = 0 },
-        name = firstName + " " + lastName,
-        status = "Suggested " + genderName(gender) + " " + speciesName(pool.species) + " name"
-      );
-    }
-  | None -> NameSuggestion(rng = Rng { seed = 0 }, name = "", status = "No name suggestions for " + speciesName(species));
 }

@@ -168,13 +168,7 @@ function tabChoices() {
 }
 
 function builderStepValue(step) {
-  match step with
-  | IdentityStep -> "identity"
-  | SpeciesOptionsStep -> "species-options"
-  | ClassOptionsStep -> "class-options"
-  | AbilitiesStep -> "abilities"
-  | EquipmentStep -> "equipment"
-  | ReviewStep -> "review";
+  step;
 }
 
 function builderStepChoices() {
@@ -189,23 +183,33 @@ function builderStepChoices() {
 }
 
 function builderStepLabel(step) {
-  match step with
-  | IdentityStep -> "Identity"
-  | SpeciesOptionsStep -> "Species Options"
-  | ClassOptionsStep -> "Class Options"
-  | AbilitiesStep -> "Abilities"
-  | EquipmentStep -> "Equipment"
-  | ReviewStep -> "Review";
+  if step == "identity" then
+    "Identity"
+  else if step == "species-options" then
+    "Species Options"
+  else if step == "class-options" then
+    "Class Options"
+  else if step == "abilities" then
+    "Abilities"
+  else if step == "equipment" then
+    "Equipment"
+  else
+    "Review";
 }
 
 function builderStepMessage(step) {
-  match step with
-  | IdentityStep -> GoIdentity
-  | SpeciesOptionsStep -> GoSpeciesOptions
-  | ClassOptionsStep -> GoClassOptions
-  | AbilitiesStep -> GoAbilities
-  | EquipmentStep -> GoEquipment
-  | ReviewStep -> GoReview;
+  if step == "identity" then
+    GoIdentity
+  else if step == "species-options" then
+    GoSpeciesOptions
+  else if step == "class-options" then
+    GoClassOptions
+  else if step == "abilities" then
+    GoAbilities
+  else if step == "equipment" then
+    GoEquipment
+  else
+    GoReview;
 }
 
 function nextAfterIdentityMessage(build) {
@@ -229,19 +233,19 @@ function builderStepButton(current, step, label) {
 
 function speciesOptionNavButtons(selection, build) {
   if hasSpeciesOptions(build.species) then
-    [builderStepButton(selection.builderStep, SpeciesOptionsStep, "2 Species Options")]
+    [builderStepButton(selection.builderStep, "species-options", "2 Species Options")]
   else
     [];
 }
 
 function builderStepNav(selection, build) {
   vdivClass(["builder-steps"], [
-    builderStepButton(selection.builderStep, IdentityStep, "1 Identity")
+    builderStepButton(selection.builderStep, "identity", "1 Identity")
   ] + speciesOptionNavButtons(selection, build) + [
-    builderStepButton(selection.builderStep, ClassOptionsStep, "3 Class Options"),
-    builderStepButton(selection.builderStep, AbilitiesStep, "4 Abilities"),
-    builderStepButton(selection.builderStep, EquipmentStep, "5 Equipment"),
-    builderStepButton(selection.builderStep, ReviewStep, "6 Review")
+    builderStepButton(selection.builderStep, "class-options", "3 Class Options"),
+    builderStepButton(selection.builderStep, "abilities", "4 Abilities"),
+    builderStepButton(selection.builderStep, "equipment", "5 Equipment"),
+    builderStepButton(selection.builderStep, "review", "6 Review")
   ]);
 }
 
@@ -1078,53 +1082,104 @@ function rollModeChoices() {
   ];
 }
 
-function scoreOption(score) {
-  vchoice(__str__(score), __str__(score), "", OptionAvailable);
-}
-
-function standardScoreUsed(selection, scoreText) {
-  selection.standardStrength == scoreText ||
-  selection.standardDexterity == scoreText ||
-  selection.standardConstitution == scoreText ||
-  selection.standardIntelligence == scoreText ||
-  selection.standardWisdom == scoreText ||
-  selection.standardCharisma == scoreText;
-}
-
-function standardScoreState(selection, scoreText) {
-  if selection.standardSelectedScore == scoreText then
-    OptionSelected
-  else if standardScoreUsed(selection, scoreText) then
-    OptionDisabled
+function scoreSlotValue(selection, slotId) {
+  if slotId == "slot-1" then
+    selection.scoreSlotOne
+  else if slotId == "slot-2" then
+    selection.scoreSlotTwo
+  else if slotId == "slot-3" then
+    selection.scoreSlotThree
+  else if slotId == "slot-4" then
+    selection.scoreSlotFour
+  else if slotId == "slot-5" then
+    selection.scoreSlotFive
+  else if slotId == "slot-6" then
+    selection.scoreSlotSix
   else
-    OptionAvailable;
+    "";
 }
 
-function standardScoreChoice(selection, score) {
-  let value = __str__(score);
-  vchoice(value, value, "", standardScoreState(selection, value));
+function scoreSlotUsed(selection, slotId) {
+  selection.standardStrength == slotId ||
+  selection.standardDexterity == slotId ||
+  selection.standardConstitution == slotId ||
+  selection.standardIntelligence == slotId ||
+  selection.standardWisdom == slotId ||
+  selection.standardCharisma == slotId;
 }
 
-function standardArrayOptions(selection) {
-  [standardScoreChoice(selection, score) for score <- standardArrayValues()];
+function scoreSlotClasses(selection, slotId) {
+  if scoreSlotValue(selection, slotId) == "" then
+    ["pf-option-button", "pf-option-disabled"]
+  else if selection.standardSelectedScore == slotId then
+    ["pf-option-button", "pf-option-selected"]
+  else if scoreSlotUsed(selection, slotId) then
+    ["pf-option-button", "pf-option-disabled"]
+  else
+    ["pf-option-button"];
 }
 
-function assignedScoreLabel(value) {
+function scoreSlotMessage(selection, slotId) {
+  if scoreSlotValue(selection, slotId) == "" then
+    NoOp
+  else if scoreSlotUsed(selection, slotId) then
+    NoOp
+  else
+    SelectStandardScore { value = slotId };
+}
+
+function scoreSlotButton(selection, slotId) {
+  let value = scoreSlotValue(selection, slotId);
+  let label = value == "" ? "—" : value;
+  vbuttonClass(label, scoreSlotClasses(selection, slotId), scoreSlotMessage(selection, slotId));
+}
+
+function assignmentScoreButtons(selection) {
+  vdivClass(["choice-grid"], [
+    scoreSlotButton(selection, "slot-1"),
+    scoreSlotButton(selection, "slot-2"),
+    scoreSlotButton(selection, "slot-3"),
+    scoreSlotButton(selection, "slot-4"),
+    scoreSlotButton(selection, "slot-5"),
+    scoreSlotButton(selection, "slot-6")
+  ]);
+}
+
+function assignedScoreLabel(selection, slotId) {
+  let value = scoreSlotValue(selection, slotId);
   value == "" ? "—" : value;
 }
 
-function standardAbilityOptionState(selection, value) {
-  selection.standardSelectedScore == "" ? OptionDisabled : OptionAvailable;
+function standardAbilityClasses(selection, assignedSlot) {
+  if assignedSlot != "" then
+    ["pf-option-button", "pf-option-selected"]
+  else if selection.standardSelectedScore == "" then
+    ["pf-option-button", "pf-option-disabled"]
+  else
+    ["pf-option-button"];
 }
 
-function standardAbilityChoice(label, value) {
-  vchoice(value, label, "", OptionAvailable);
+function standardAbilityMessage(selection, assignedSlot, msg) {
+  if assignedSlot != "" then
+    msg
+  else if selection.standardSelectedScore == "" then
+    NoOp
+  else
+    msg;
 }
 
-function standardAbilityButton(name, label, assigned, msg, selection) {
-  let text = label + " " + assignedScoreLabel(assigned);
-  let state = standardAbilityOptionState(selection, assigned);
-  vchoiceGroup(name, [vchoice(name, text, "", state)], fn v => msg);
+function standardAbilityButton(name, label, assignedSlot, msg, selection) {
+  let text = label + " " + assignedScoreLabel(selection, assignedSlot);
+  vbuttonClass(text, standardAbilityClasses(selection, assignedSlot), standardAbilityMessage(selection, assignedSlot, msg));
+}
+
+function hasAssignableScorePool(selection) {
+  selection.scoreSlotOne != "" ||
+  selection.scoreSlotTwo != "" ||
+  selection.scoreSlotThree != "" ||
+  selection.scoreSlotFour != "" ||
+  selection.scoreSlotFive != "" ||
+  selection.scoreSlotSix != "";
 }
 
 function pointBuyAdjust(label, score, decreaseMsg, increaseMsg) {
@@ -1164,8 +1219,8 @@ function viewBackgroundBonusBuilder(model) {
 function viewStandardArrayBuilder(model) {
   let selection = model.selection;
   panel("Standard array", [
-    vp([vtext("Choose an unassigned score, then choose the ability that receives it. Assigned scores become unavailable until that ability is changed.")]),
-    field("Scores", vchoiceGroup("standard-score", standardArrayOptions(selection), fn v => SelectStandardScore { value = v })),
+    vp([vtext("Choose an unassigned score, then choose the ability that receives it. Click an assigned ability with no score selected to unassign it; assigning a new score there frees the old one.")]),
+    field("Scores", assignmentScoreButtons(selection)),
     field("Abilities", vdivClass(["choice-grid"], [
       standardAbilityButton("assign-str", "STR", selection.standardStrength, AssignStandardStrength, selection),
       standardAbilityButton("assign-dex", "DEX", selection.standardDexterity, AssignStandardDexterity, selection),
@@ -1195,6 +1250,24 @@ function viewPointBuyBuilder(model) {
   ]);
 }
 
+function viewRollAssignmentTools(selection) {
+  if hasAssignableScorePool(selection) then
+    [
+      vp([vtext("These rolled scores are a pool. Choose a score, then assign it to an ability. 3d6 straight is the only roll mode that applies directly in order.")]),
+      field("Rolled scores", assignmentScoreButtons(selection)),
+      field("Abilities", vdivClass(["choice-grid"], [
+        standardAbilityButton("roll-assign-str", "STR", selection.standardStrength, AssignStandardStrength, selection),
+        standardAbilityButton("roll-assign-dex", "DEX", selection.standardDexterity, AssignStandardDexterity, selection),
+        standardAbilityButton("roll-assign-con", "CON", selection.standardConstitution, AssignStandardConstitution, selection),
+        standardAbilityButton("roll-assign-int", "INT", selection.standardIntelligence, AssignStandardIntelligence, selection),
+        standardAbilityButton("roll-assign-wis", "WIS", selection.standardWisdom, AssignStandardWisdom, selection),
+        standardAbilityButton("roll-assign-cha", "CHA", selection.standardCharisma, AssignStandardCharisma, selection)
+      ]))
+    ]
+  else
+    [];
+}
+
 function viewRollBuilder(model) {
   let selection = model.selection;
   panel("Roll ability scores", [
@@ -1202,7 +1275,7 @@ function viewRollBuilder(model) {
     field("Roll mode", vselect("roll-mode", rollModeChoices(), selection.rollMode, fn v => SetRollMode { value = v })),
     row("Last roll", selection.rollSummary),
     vdivClass(["button-row"], [vbutton("Roll ability scores", RollAbilityScores)])
-  ]);
+  ] + viewRollAssignmentTools(selection));
 }
 
 function viewAbilityMethodPanel(model) {
@@ -1294,13 +1367,19 @@ function viewStructuredBuilder(model, context, view) {
 }
 
 function viewBuilderStep(model, context, view) {
-  match model.selection.builderStep with
-  | IdentityStep -> [viewBuilderIdentity(model, view)]
-  | SpeciesOptionsStep -> [viewBuilderSpeciesOptions(model, view)]
-  | ClassOptionsStep -> [viewBuilderClassOptions(model, view)]
-  | AbilitiesStep -> [viewBuilderAbilities(model, view)]
-  | EquipmentStep -> [viewBuilderEquipment(model, view)]
-  | ReviewStep -> [viewBuilderReview(model, context, view)];
+  let step = model.selection.builderStep;
+  if step == "identity" then
+    [viewBuilderIdentity(model, view)]
+  else if step == "species-options" then
+    [viewBuilderSpeciesOptions(model, view)]
+  else if step == "class-options" then
+    [viewBuilderClassOptions(model, view)]
+  else if step == "abilities" then
+    [viewBuilderAbilities(model, view)]
+  else if step == "equipment" then
+    [viewBuilderEquipment(model, view)]
+  else
+    [viewBuilderReview(model, context, view)];
 }
 
 function viewBuilder(model, view) {

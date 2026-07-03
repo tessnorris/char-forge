@@ -8,18 +8,9 @@ import * from "../character/character";
 import * from "../character/resources";
 import * from "../content/contentpack";
 import * from "../builder/abilitybuilder";
-import * from "../builder/namegenerator";
 
 export type CharacterDocument = { id, character, turn }
 
-export type BuilderStep = {
-  | IdentityStep
-  | SpeciesOptionsStep
-  | ClassOptionsStep
-  | AbilitiesStep
-  | EquipmentStep
-  | ReviewStep
-}
 
 export type BuilderSelection = {
   activeTab,
@@ -27,7 +18,15 @@ export type BuilderSelection = {
   equipmentCategory,
   equipmentSearch,
   expandedSections,
+
   abilityMethod,
+
+  // Ability score assignment state.
+  //
+  // These fields belong to the builder/editor layer, not the character domain.
+  // `standardSelectedScore` stores the selected slot id. The per-ability fields
+  // store assigned slot ids. Slot values are text so the UI can keep duplicate
+  // rolled values distinct by slot id.
   standardSelectedScore,
   standardStrength,
   standardDexterity,
@@ -35,10 +34,18 @@ export type BuilderSelection = {
   standardIntelligence,
   standardWisdom,
   standardCharisma,
+  scoreSlotOne,
+  scoreSlotTwo,
+  scoreSlotThree,
+  scoreSlotFour,
+  scoreSlotFive,
+  scoreSlotSix,
+
   backgroundBonusMode,
   backgroundBonusPrimary,
   backgroundBonusSecondary,
   backgroundBonusTertiary,
+
   rollMode,
   rollSeed,
   rollSummary
@@ -47,6 +54,7 @@ export type Model = { catalog, contentPacks, documents, selectedId, character, t
 export type UpdateResult = { model, cmd }
 
 export type Msg = {
+  | NoOp
   | NewCharacter
   | SelectCharacter : value
   | DuplicateSelected
@@ -171,7 +179,7 @@ export function documentLevel(doc) {
 
 export function documentSummary(doc) {
   let build = doc.character.build;
-  "L" + __str__(build.level) + " " + speciesName(build.species) + " " + className(build.class);
+  "Level " + __str__(build.level) + " " + speciesName(build.species) + " " + className(build.class);
 }
 
 export function documentButtonLabel(doc) {
