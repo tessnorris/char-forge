@@ -1,0 +1,1466 @@
+// Character Forge app UI/view helpers
+//
+// This module owns browser view construction only. It does not update
+// character data, calculate rules, or manage documents.
+
+import * from "$PFUN_HOME/lib/htmllib";
+import * from "$PFUN_HOME/lib/viewlib";
+import * from "../character/abilities";
+import * from "../character/character";
+import * from "../character/rules";
+import * from "../content/content";
+import * from "../content/contentpack";
+import * from "../content/catalogops";
+import * from "../character/buildops";
+import * from "../character/stateops";
+import * from "../character/context";
+import * from "../character/resources";
+import * from "../character/actions";
+import * from "./appmodel";
+import * from "./documentops";
+import * from "./saveload";
+import * from "../character/traits";
+import * from "../character/feats";
+import * from "../builder/abilitybuilder";
+import * from "../builder/namegenerator";
+
+// ── View helpers ──────────────────────────────────────────────────────────────
+
+function panel(title, children) {
+  vcard(title, children);
+}
+
+function row(label, value) {
+  vfield(label, value);
+}
+
+function field(label, control) {
+  vdivClass(["field"], [
+    vdivClass(["field-label"], [vtext(label)]),
+    control
+  ]);
+}
+
+function scoreInput(name, value, msgFn) {
+  vinput(name, __str__(value), "score", msgFn);
+}
+
+function listText(values) {
+  length(values) == 0 ? "none" : join(values, ", ");
+}
+
+function weaponLines(weapons) {
+  [w.line for w <- weapons];
+}
+
+function bonusLines(bonuses) {
+  [b.line for b <- bonuses];
+}
+
+function traitDefinitionsForView(traits) {
+  [vdefinition(t.name, t.kindName + " — " + t.source + ". " + t.description) for t <- traits];
+}
+
+function featDefinitionsForView(feats) {
+  [vdefinition(f.name, f.kindName + ". " + f.summary) for f <- feats];
+}
+
+function resourceLines(resources) {
+  [r.line for r <- resources];
+}
+
+function conditionLine(character) {
+  let names = conditionNames(character);
+  listText(names);
+}
+
+function conditionId(condition) {
+  match condition with
+  | Blinded -> "condition.blinded"
+  | Charmed -> "condition.charmed"
+  | Frightened -> "condition.frightened"
+  | Grappled -> "condition.grappled"
+  | Incapacitated -> "condition.incapacitated"
+  | Invisible -> "condition.invisible"
+  | Poisoned -> "condition.poisoned"
+  | Prone -> "condition.prone"
+  | Restrained -> "condition.restrained"
+  | Stunned -> "condition.stunned"
+  | Unconscious -> "condition.unconscious";
+}
+
+function conditionFromId(id) {
+  if id == "condition.blinded" then
+    Blinded
+  else if id == "condition.charmed" then
+    Charmed
+  else if id == "condition.frightened" then
+    Frightened
+  else if id == "condition.grappled" then
+    Grappled
+  else if id == "condition.incapacitated" then
+    Incapacitated
+  else if id == "condition.invisible" then
+    Invisible
+  else if id == "condition.poisoned" then
+    Poisoned
+  else if id == "condition.restrained" then
+    Restrained
+  else if id == "condition.stunned" then
+    Stunned
+  else if id == "condition.unconscious" then
+    Unconscious
+  else
+    Prone;
+}
+
+function conditionChoices() {
+  [
+    choice("condition.blinded", "Blinded"),
+    choice("condition.charmed", "Charmed"),
+    choice("condition.frightened", "Frightened"),
+    choice("condition.grappled", "Grappled"),
+    choice("condition.incapacitated", "Incapacitated"),
+    choice("condition.invisible", "Invisible"),
+    choice("condition.poisoned", "Poisoned"),
+    choice("condition.prone", "Prone"),
+    choice("condition.restrained", "Restrained"),
+    choice("condition.stunned", "Stunned"),
+    choice("condition.unconscious", "Unconscious")
+  ];
+}
+
+function conditionAddButton(c) {
+  catalogItemButton(c.label, AddConditionById { c.value });
+}
+
+function activeConditionView(condition) {
+  vdivClass(["catalog-item"], [
+    vspan([vtext(conditionName(condition))]),
+    vbutton("Remove", RemoveConditionById { conditionId(condition) })
+  ]);
+}
+
+function activeConditionViews(character) {
+  if length(character.state.conditions) == 0 then
+    [vdivClass(["catalog-item"], [vspan([vtext("No active conditions")])])]
+  else
+    [activeConditionView(c) for c <- character.state.conditions];
+}
+
+function viewConditionsEditor(character) {
+  panel("Conditions", [
+    row("Active", conditionLine(character)),
+    vh(3, "Active conditions"),
+    vdivClass(["catalog-list"], activeConditionViews(character)),
+    vh(3, "Add condition"),
+    vdivClass(["catalog-list"], [conditionAddButton(c) for c <- conditionChoices()])
+  ]);
+}
+
+
+function tabChoices() {
+  [
+    choice("builder", "Builder"),
+    choice("play", "Play"),
+    choice("sheet", "Sheet")
+  ];
+}
+
+function builderStepValue(step) {
+  match step with
+  | IdentityStep -> "identity"
+  | SpeciesOptionsStep -> "species-options"
+  | ClassOptionsStep -> "class-options"
+  | AbilitiesStep -> "abilities"
+  | EquipmentStep -> "equipment"
+  | ReviewStep -> "review";
+}
+
+function builderStepChoices() {
+  [
+    choice("identity", "1. Identity"),
+    choice("species-options", "2. Species Options"),
+    choice("class-options", "3. Class Options"),
+    choice("abilities", "4. Abilities"),
+    choice("equipment", "5. Equipment"),
+    choice("review", "6. Review")
+  ];
+}
+
+function builderStepLabel(step) {
+  match step with
+  | IdentityStep -> "Identity"
+  | SpeciesOptionsStep -> "Species Options"
+  | ClassOptionsStep -> "Class Options"
+  | AbilitiesStep -> "Abilities"
+  | EquipmentStep -> "Equipment"
+  | ReviewStep -> "Review";
+}
+
+function builderStepMessage(step) {
+  match step with
+  | IdentityStep -> GoIdentity
+  | SpeciesOptionsStep -> GoSpeciesOptions
+  | ClassOptionsStep -> GoClassOptions
+  | AbilitiesStep -> GoAbilities
+  | EquipmentStep -> GoEquipment
+  | ReviewStep -> GoReview;
+}
+
+function nextAfterIdentityMessage(build) {
+  if hasSpeciesOptions(build.species) then
+    GoSpeciesOptions
+  else
+    GoClassOptions;
+}
+
+function backBeforeClassOptionsMessage(build) {
+  if hasSpeciesOptions(build.species) then
+    GoSpeciesOptions
+  else
+    GoIdentity;
+}
+
+function builderStepButton(current, step, label) {
+  let classes = builderStepValue(current) == builderStepValue(step) ? ["builder-step", "selected"] : ["builder-step"];
+  vdivClass(classes, [vbutton(label, builderStepMessage(step))]);
+}
+
+function speciesOptionNavButtons(selection, build) {
+  if hasSpeciesOptions(build.species) then
+    [builderStepButton(selection.builderStep, SpeciesOptionsStep, "2 Species Options")]
+  else
+    [];
+}
+
+function builderStepNav(selection, build) {
+  vdivClass(["builder-steps"], [
+    builderStepButton(selection.builderStep, IdentityStep, "1 Identity")
+  ] + speciesOptionNavButtons(selection, build) + [
+    builderStepButton(selection.builderStep, ClassOptionsStep, "3 Class Options"),
+    builderStepButton(selection.builderStep, AbilitiesStep, "4 Abilities"),
+    builderStepButton(selection.builderStep, EquipmentStep, "5 Equipment"),
+    builderStepButton(selection.builderStep, ReviewStep, "6 Review")
+  ]);
+}
+
+function equipmentCategoryChoices() {
+  [
+    choice("weapons", "Weapons"),
+    choice("armor", "Armor"),
+    choice("tools", "Tools"),
+    choice("gear", "Gear")
+  ];
+}
+
+
+function catalogItemButton(label, msg) {
+  vdivClass(["catalog-item"], [
+    vspan([vtext(label)]),
+    vbutton("Add", msg)
+  ]);
+}
+
+function textMatches(search, value) {
+  if search == "" then
+    true
+  else {
+    let found = findSlice(value, search);
+    match found with
+    | Some m -> true
+    | None -> false;
+  }
+}
+
+function contentMatches(search, id, name) {
+  textMatches(search, name) || textMatches(search, id);
+}
+
+function filteredWeapons(catalog, search) {
+  filter(fn d => contentMatches(search, d.id, d.name), catalog.weapons);
+}
+
+function filteredArmor(catalog, search) {
+  filter(fn d => contentMatches(search, d.id, d.name), catalog.armor);
+}
+
+function filteredTools(catalog, search) {
+  filter(fn d => contentMatches(search, d.id, d.name), catalog.tools);
+}
+
+function filteredGear(catalog, search) {
+  filter(fn d => contentMatches(search, d.id, d.name), catalog.gear);
+}
+
+function pickerCategoryButton(active, id, label, count) {
+  let classes = active == id ? ["character-row", "selected"] : ["character-row"];
+  let text = label + " (" + __str__(count) + ")";
+  vdivClass(classes, [vbutton(text, SetEquipmentCategory { id })]);
+}
+
+function equipmentCategoryBrowser(model) {
+  let active = model.selection.equipmentCategory;
+  let search = model.selection.equipmentSearch;
+  vdivClass(["character-list"], [
+    pickerCategoryButton(active, "weapons", "Weapons", length(filteredWeapons(model.catalog, search))),
+    pickerCategoryButton(active, "armor", "Armor", length(filteredArmor(model.catalog, search))),
+    pickerCategoryButton(active, "tools", "Tools", length(filteredTools(model.catalog, search))),
+    pickerCategoryButton(active, "gear", "Gear", length(filteredGear(model.catalog, search)))
+  ]);
+}
+
+function weaponDefinitionCard(def) {
+  vdivClass(["action-card"], [
+    vdivClass(["action-head"], [
+      vspan([vtext(def.name)]),
+      vspan([vtext(sourceName(def.source))])
+    ]),
+    vfieldBlock("Weapon", [
+      row("ID", def.id),
+      row("Ability", abilityShort(def.ability)),
+      row("Damage", def.damage),
+      row("Model", weaponName(def.weapon))
+    ]),
+    vdivClass(["button-row"], [vbutton("Add weapon", AddWeaponById { def.id })])
+  ]);
+}
+
+function armorDefinitionCard(def) {
+  vdivClass(["action-card"], [
+    vdivClass(["action-head"], [
+      vspan([vtext(def.name)]),
+      vspan([vtext(sourceName(def.source))])
+    ]),
+    vfieldBlock("Armor", [
+      row("ID", def.id),
+      row("Base AC", __str__(def.baseAc)),
+      row("Dex limit", def.dexLimit > 20 ? "none" : __str__(def.dexLimit)),
+      row("Model", armorName(def.armor))
+    ]),
+    vdivClass(["button-row"], [vbutton("Equip armor", AddArmorById { def.id })])
+  ]);
+}
+
+function toolDefinitionCard(def) {
+  vdivClass(["action-card"], [
+    vdivClass(["action-head"], [
+      vspan([vtext(def.name)]),
+      vspan([vtext(sourceName(def.source))])
+    ]),
+    vfieldBlock("Tool", [
+      row("ID", def.id),
+      row("Model", toolName(def.tool))
+    ]),
+    vdivClass(["button-row"], [vbutton("Add tool", AddToolById { def.id })])
+  ]);
+}
+
+function gearDefinitionCard(def) {
+  vdivClass(["action-card"], [
+    vdivClass(["action-head"], [
+      vspan([vtext(def.name)]),
+      vspan([vtext(sourceName(def.source))])
+    ]),
+    vfieldBlock("Gear", [
+      row("ID", def.id),
+      row("Model", gearName(def.gear))
+    ]),
+    vdivClass(["button-row"], [vbutton("Add gear", AddGearById { def.id })])
+  ]);
+}
+
+function noPickerResults() {
+  [vdivClass(["catalog-item"], [vspan([vtext("No matching content")])])];
+}
+
+function weaponPickerResults(catalog, search) {
+  let defs = filteredWeapons(catalog, search);
+  length(defs) == 0 ? noPickerResults() : [weaponDefinitionCard(d) for d <- defs];
+}
+
+function armorPickerResults(catalog, search) {
+  let defs = filteredArmor(catalog, search);
+  length(defs) == 0 ? noPickerResults() : [armorDefinitionCard(d) for d <- defs];
+}
+
+function toolPickerResults(catalog, search) {
+  let defs = filteredTools(catalog, search);
+  length(defs) == 0 ? noPickerResults() : [toolDefinitionCard(d) for d <- defs];
+}
+
+function gearPickerResults(catalog, search) {
+  let defs = filteredGear(catalog, search);
+  length(defs) == 0 ? noPickerResults() : [gearDefinitionCard(d) for d <- defs];
+}
+
+function equipmentPickerResults(model) {
+  let category = model.selection.equipmentCategory;
+  let search = model.selection.equipmentSearch;
+  if category == "weapons" then
+    weaponPickerResults(model.catalog, search)
+  else if category == "armor" then
+    armorPickerResults(model.catalog, search)
+  else if category == "tools" then
+    toolPickerResults(model.catalog, search)
+  else
+    gearPickerResults(model.catalog, search);
+}
+
+function equipmentPickerTitle(category) {
+  if category == "weapons" then
+    "Add weapon"
+  else if category == "armor" then
+    "Equip armor"
+  else if category == "tools" then
+    "Add tool"
+  else
+    "Add gear";
+}
+
+function viewEquipmentPicker(model, view) {
+  let selection = model.selection;
+  panel("Equipment picker", [
+    vp([vtext("Browse catalog content by category. Search matches names or stable IDs; adding an item updates the build, and the sheet recomputes from the projected character.")]),
+    field("Search", vinput("equipment-search-main", selection.equipmentSearch, "search equipment", fn v => SetEquipmentSearch { value = v })),
+    vfieldBlock("Current loadout", [
+      row("Equipment", listText(view.equipment)),
+      row("Active category", equipmentPickerTitle(selection.equipmentCategory))
+    ]),
+    vh(3, "Categories"),
+    equipmentCategoryBrowser(model),
+    vh(3, equipmentPickerTitle(selection.equipmentCategory)),
+    vdivClass(["action-list"], equipmentPickerResults(model))
+  ]);
+}
+
+function editorEquippedWeaponViews(weapons) {
+  if length(weapons) == 0 then
+    [vdivClass(["catalog-item"], [vspan([vtext("No weapons equipped")])])]
+  else
+    [
+      vdivClass(["catalog-item"], [
+        vspan([vtext(weaponName(w))]),
+        vbutton("Remove", RemoveWeaponById { weaponId(w) })
+      ])
+      for w <- weapons
+    ];
+}
+
+function editorEquippedArmorViews(armor) {
+  if length(armor) == 0 then
+    [vdivClass(["catalog-item"], [vspan([vtext("No armor equipped")])])]
+  else
+    [
+      vdivClass(["catalog-item"], [
+        vspan([vtext(armorName(a))]),
+        vbutton("Clear", ClearArmorMsg)
+      ])
+      for a <- armor
+    ];
+}
+
+function editorEquippedToolViews(tools) {
+  if length(tools) == 0 then
+    [vdivClass(["catalog-item"], [vspan([vtext("No tools added")])])]
+  else
+    [
+      vdivClass(["catalog-item"], [
+        vspan([vtext(toolName(t))]),
+        vbutton("Remove", RemoveToolById { toolId(t) })
+      ])
+      for t <- tools
+    ];
+}
+
+function editorEquippedGearViews(gear) {
+  if length(gear) == 0 then
+    [vdivClass(["catalog-item"], [vspan([vtext("No gear added")])])]
+  else
+    [
+      vdivClass(["catalog-item"], [
+        vspan([vtext(gearName(g))]),
+        vbutton("Remove", RemoveGearById { gearId(g) })
+      ])
+      for g <- gear
+    ];
+}
+
+function viewEquippedEquipment(model) {
+  let loadout = model.character.build.loadout;
+  panel("Equipped equipment", [
+    vh(3, "Weapons"),
+    vdivClass(["catalog-list"], editorEquippedWeaponViews(loadout.weapons)),
+    vh(3, "Armor"),
+    vdivClass(["catalog-list"], editorEquippedArmorViews(loadout.armor)),
+    vh(3, "Tools"),
+    vdivClass(["catalog-list"], editorEquippedToolViews(loadout.tools)),
+    vh(3, "Gear"),
+    vdivClass(["catalog-list"], editorEquippedGearViews(loadout.gear))
+  ]);
+}
+
+function documentRow(model, doc) {
+  let selected = doc.id == model.selectedId;
+  let label = documentButtonLabel(doc);
+  let classes = selected ? ["character-row", "selected"] : ["character-row"];
+  vdivClass(classes, [
+    vbutton(label, SelectCharacter { doc.id })
+  ]);
+}
+
+function documentRows(model) {
+  [documentRow(model, doc) for doc <- model.documents];
+}
+
+function viewCharacterList(model) {
+  panel("Characters", [
+    vdivClass(["button-row"], [
+      vbutton("New", NewCharacter),
+      vbutton("Duplicate", DuplicateSelected),
+      vbutton("Delete", DeleteSelected)
+    ]),
+    vdivClass(["character-list"], documentRows(model))
+  ]);
+}
+
+
+function exportFilename(model) {
+  let name = model.character.build.identity.name;
+  name + ".pfchar";
+}
+
+function exportDocumentText(model) {
+  saveDocument(makeCharacterDocument(model.selectedId, model.character, model.turn));
+}
+
+
+function contentPackAction(pack) {
+  if pack.enabled then "Disable" else "Enable";
+}
+
+function contentPackRow(pack) {
+  vdivClass(["catalog-item"], [
+    vspan([vtext(contentPackSummary(pack))]),
+    vbutton(contentPackAction(pack), ToggleContentPack { pack.id })
+  ]);
+}
+
+function contentEntryLabel(name, implemented) {
+  if implemented then name else name + " ";
+}
+
+function speciesEntryDefinition(entry) {
+  vdefinition(contentEntryLabel(entry.definition.name, entry.implemented), entry.definition.description);
+}
+
+function classEntryDefinition(entry) {
+  let die = "Hit die d" + __str__(entry.hitDie);
+  let primary = join(entry.primaryAbilities, ", ");
+  let text = entry.definition.description + " " + die + ". Primary abilities: " + primary + ".";
+  vdefinition(contentEntryLabel(entry.definition.name, entry.implemented), text);
+}
+
+function backgroundEntryDefinition(entry) {
+  let abilities = join(entry.abilityOptions, ", ");
+  let skills = join(entry.skillNames, ", ");
+  let text = "Ability choices: " + abilities + ". Skills: " + skills + ". Origin feat: " + entry.originFeatId + ".";
+  vdefinition(contentEntryLabel(entry.definition.name, entry.implemented), text);
+}
+
+function featEntryDefinition(entry) {
+  vdefinition(contentEntryLabel(entry.definition.name, entry.implemented), entry.definition.description);
+}
+
+function equipmentPackDefinition(def) {
+  vdefinition(def.name, def.description);
+}
+
+function viewCatalogContent(catalog) {
+  vcard("2024 Core catalog", [
+    vp([vtext("Species, classes, backgrounds, and origin feats are structured content records. Descriptions are original summaries; rules are represented as typed data and pure projections.")]),
+    vdefinitionList("Species", [speciesEntryDefinition(e) for e <- catalog.speciesEntries]),
+    vdefinitionList("Classes", [classEntryDefinition(e) for e <- catalog.classEntries]),
+    vdefinitionList("Backgrounds", [backgroundEntryDefinition(e) for e <- catalog.backgroundEntries]),
+    vdefinitionList("Origin feats", [featEntryDefinition(e) for e <- catalog.featEntries]),
+    vdefinitionList("Equipment", [equipmentPackDefinition(d) for d <- contentDefinitionsByKind(catalog, WeaponContent) + contentDefinitionsByKind(catalog, ArmorContent) + contentDefinitionsByKind(catalog, ToolContent) + contentDefinitionsByKind(catalog, GearContent) + contentDefinitionsByKind(catalog, MagicItemContent)])
+  ]);
+}
+
+function viewContentPacks(model) {
+  panel("Content packs", [
+    vfieldBlock("Loaded packs", [
+      row("Active", activeContentPackLine(model.contentPacks)),
+      row("Total", __str__(length(model.contentPacks)))
+    ]),
+    vdivClass(["catalog-list"], [contentPackRow(p) for p <- model.contentPacks]),
+    viewCatalogContent(model.catalog)
+  ]);
+}
+
+function viewSaveLoad(model) {
+  panel("Save / Load", [
+    vp([vtext("Import and export character files. Saved files contain build + play state only; derived sheet values are recomputed when loaded.")]),
+    vdivClass(["button-row"], [
+      vfile("character-import", "Import character...", [".pfchar", ".json"], fn v => ImportCharacterFile { value = v }),
+      vdownload("Export selected...", exportFilename(model), exportDocumentText(model), "application/json", ExportDownloaded)
+    ])
+  ]);
+}
+
+function viewBuilderSelection(model) {
+  let selection = model.selection;
+  panel("Editor state", [
+    field("Active tab", vselect("active-tab", tabChoices(), selection.activeTab, fn v => SetActiveTab { value = v })),
+    field("Builder step", vselect("builder-step", builderStepChoices(), builderStepValue(selection.builderStep), fn v => SetBuilderStep { value = v })),
+    field("Equipment kind", vselect("equipment-category", equipmentCategoryChoices(), selection.equipmentCategory, fn v => SetEquipmentCategory { value = v })),
+    field("Search", vinput("equipment-search", selection.equipmentSearch, "equipment search", fn v => SetEquipmentSearch { value = v })),
+    row("Expanded", listText(selection.expandedSections))
+  ]);
+}
+
+
+function genderChoices() {
+  [
+    choice("any", "Any / unspecified"),
+    choice("male", "Male"),
+    choice("nonbinary", "Non-binary"),
+    choice("female", "Female")
+  ];
+}
+
+function genderOptions() {
+  [
+    voption("any", "Any", "✦"),
+    voption("female", "Female", "♀"),
+    voption("nonbinary", "Non-binary", "⚧"),
+    voption("male", "Male", "♂")
+  ];
+}
+
+function genderSelector(build) {
+  voptionButtonGroup("gender", genderOptions(), genderId(build.identity.gender), fn v => SetGender { value = v });
+}
+
+function nameSuggestionStatus(build) {
+  if hasNamesForSpecies(build.species) then
+    "Names available for " + speciesName(build.species)
+  else
+    "No name suggestions for " + speciesName(build.species);
+}
+
+
+function hasSpeciesOptions(species) {
+  let name = speciesName(species);
+  name == "Dragonborn" || name == "Elf" || name == "Gnome" || name == "Goliath" || name == "Human" || name == "Tiefling";
+}
+
+function nextAfterIdentity(build) {
+  if hasSpeciesOptions(build.species) then
+    "species-options"
+  else
+    "class-options";
+}
+
+function backBeforeClassOptions(build) {
+  if hasSpeciesOptions(build.species) then
+    "species-options"
+  else
+    "identity";
+}
+
+function backBeforeAbilities(build) {
+  "class-options";
+}
+
+function spellAbilityOptions() {
+  [
+    voption("int", "Intelligence", "★"),
+    voption("wis", "Wisdom", "◆"),
+    voption("cha", "Charisma", "✦")
+  ];
+}
+
+function coreSkillOptions() {
+  [
+    voption("insight", "Insight", "◐"),
+    voption("perception", "Perception", "◉"),
+    voption("survival", "Survival", "♣")
+  ];
+}
+
+function dragonbornAncestryOptions() {
+  [
+    voption("black", "Black", "◆"),
+    voption("blue", "Blue", "⚡"),
+    voption("brass", "Brass", "🔥"),
+    voption("bronze", "Bronze", "⚡"),
+    voption("copper", "Copper", "◆"),
+    voption("gold", "Gold", "🔥"),
+    voption("green", "Green", "☠"),
+    voption("red", "Red", "🔥"),
+    voption("silver", "Silver", "❄"),
+    voption("white", "White", "❄")
+  ];
+}
+
+function viewDragonbornOptions(build) {
+  let ancestry = build.speciesOptions.dragonbornAncestry;
+  panel("Draconic Ancestry", [
+    vp([vtext("Choose the dragon ancestry that determines breath damage and resistance.")]),
+    field("Ancestry", voptionButtonGroup("dragonborn-ancestry", dragonbornAncestryOptions(), dragonbornAncestryId(ancestry), fn v => SetDragonbornAncestry { value = v })),
+    vfieldBlock("Selected ancestry", [
+      row("Ancestry", dragonbornAncestryName(ancestry)),
+      row("Damage type", dragonbornAncestryDamage(ancestry))
+    ])
+  ]);
+}
+
+function elfLineageOptions() {
+  [
+    voption("drow", "Drow", "☾"),
+    voption("high", "High Elf", "✦"),
+    voption("wood", "Wood Elf", "♣")
+  ];
+}
+
+function viewElfLineageOptions(build) {
+  panel("Elven lineage", [
+    vp([vtext("Choose the lineage-specific option for this Elf, then choose the extra skill granted by the species setup.")]),
+    field("Lineage", voptionButtonGroup("elf-lineage", elfLineageOptions(), elfLineageId(build.speciesOptions.elfLineage), fn v => SetElfLineage { value = v })),
+    field("Spellcasting ability", voptionButtonGroup("elf-casting", spellAbilityOptions(), build.speciesOptions.lineageSpellcastingAbility, fn v => SetLineageSpellcastingAbility { value = v })),
+    field("Bonus skill", voptionButtonGroup("elf-skill", coreSkillOptions(), skillId(build.speciesOptions.elfBonusSkill), fn v => SetElfBonusSkill { value = v })),
+    vfieldBlock("Selected lineage", [
+      row("Lineage", elfLineageName(build.speciesOptions.elfLineage)),
+      row("Casting ability", abilitySpellcastingName(build.speciesOptions.lineageSpellcastingAbility)),
+      row("Bonus skill", skillName(build.speciesOptions.elfBonusSkill))
+    ])
+  ]);
+}
+
+function gnomeLineageOptions() {
+  [
+    voption("forest", "Forest Gnome", "🌲"),
+    voption("rock", "Rock Gnome", "⚙")
+  ];
+}
+
+function viewGnomeOptions(build) {
+  panel("Gnomish lineage", [
+    vp([vtext("Choose the Gnome lineage and spellcasting ability used for lineage magic.")]),
+    field("Lineage", voptionButtonGroup("gnome-lineage", gnomeLineageOptions(), gnomeLineageId(build.speciesOptions.gnomeLineage), fn v => SetGnomeLineage { value = v })),
+    field("Spellcasting ability", voptionButtonGroup("gnome-casting", spellAbilityOptions(), build.speciesOptions.lineageSpellcastingAbility, fn v => SetLineageSpellcastingAbility { value = v })),
+    vfieldBlock("Selected lineage", [
+      row("Lineage", gnomeLineageName(build.speciesOptions.gnomeLineage)),
+      row("Casting ability", abilitySpellcastingName(build.speciesOptions.lineageSpellcastingAbility))
+    ])
+  ]);
+}
+
+function goliathAncestryOptions() {
+  [
+    voption("cloud", "Cloud Giant", "☁"),
+    voption("fire", "Fire Giant", "🔥"),
+    voption("frost", "Frost Giant", "❄"),
+    voption("hill", "Hill Giant", "⬤"),
+    voption("stone", "Stone Giant", "◈"),
+    voption("storm", "Storm Giant", "⚡")
+  ];
+}
+
+function viewGoliathOptions(build) {
+  panel("Giant ancestry", [
+    vp([vtext("Choose the Giant ancestry that determines the Goliath's special trait.")]),
+    field("Ancestry", voptionButtonGroup("goliath-ancestry", goliathAncestryOptions(), goliathAncestryId(build.speciesOptions.goliathAncestry), fn v => SetGoliathAncestry { value = v })),
+    vfieldBlock("Selected ancestry", [
+      row("Ancestry", goliathAncestryName(build.speciesOptions.goliathAncestry))
+    ])
+  ]);
+}
+
+function humanFeatOptions() {
+  [
+    voption("skilled", "Skilled", "★"),
+    voption("alert", "Alert", "⚑"),
+    voption("lucky", "Lucky", "✦"),
+    voption("tough", "Tough", "⬤")
+  ];
+}
+
+function humanFeatName(id) {
+  if id == "alert" then "Alert"
+  else if id == "lucky" then "Lucky"
+  else if id == "tough" then "Tough"
+  else "Skilled";
+}
+
+function viewHumanOptions(build) {
+  panel("Human options", [
+    vp([vtext("Choose the extra skill and Origin feat for this Human.")]),
+    field("Bonus skill", voptionButtonGroup("human-skill", coreSkillOptions(), skillId(build.speciesOptions.humanBonusSkill), fn v => SetHumanBonusSkill { value = v })),
+    field("Bonus feat", voptionButtonGroup("human-feat", humanFeatOptions(), build.speciesOptions.humanBonusFeat, fn v => SetHumanBonusFeat { value = v })),
+    vfieldBlock("Selected options", [
+      row("Skill", skillName(build.speciesOptions.humanBonusSkill)),
+      row("Feat", humanFeatName(build.speciesOptions.humanBonusFeat))
+    ])
+  ]);
+}
+
+function tieflingLineageOptions() {
+  [
+    voption("abyssal", "Abyssal", "☠"),
+    voption("chthonic", "Chthonic", "☾"),
+    voption("infernal", "Infernal", "🔥")
+  ];
+}
+
+function viewTieflingOptions(build) {
+  let lineage = build.speciesOptions.tieflingLineage;
+  panel("Fiendish legacy", [
+    vp([vtext("Choose the legacy and spellcasting ability for Tiefling magic.")]),
+    field("Legacy", voptionButtonGroup("tiefling-lineage", tieflingLineageOptions(), tieflingLineageId(lineage), fn v => SetTieflingLineage { value = v })),
+    field("Spellcasting ability", voptionButtonGroup("tiefling-casting", spellAbilityOptions(), build.speciesOptions.lineageSpellcastingAbility, fn v => SetLineageSpellcastingAbility { value = v })),
+    vfieldBlock("Selected legacy", [
+      row("Legacy", tieflingLineageName(lineage)),
+      row("Resistance", tieflingLineageResistance(lineage)),
+      row("Casting ability", abilitySpellcastingName(build.speciesOptions.lineageSpellcastingAbility))
+    ])
+  ]);
+}
+
+function speciesOptionViews(build) {
+  let name = speciesName(build.species);
+  if name == "Dragonborn" then
+    [viewDragonbornOptions(build)]
+  else if name == "Elf" then
+    [viewElfLineageOptions(build)]
+  else if name == "Gnome" then
+    [viewGnomeOptions(build)]
+  else if name == "Goliath" then
+    [viewGoliathOptions(build)]
+  else if name == "Human" then
+    [viewHumanOptions(build)]
+  else if name == "Tiefling" then
+    [viewTieflingOptions(build)]
+  else
+    [panel("No species options", [vp([vtext("This species has no extra setup choices.")])])];
+}
+
+function skillNameList(skills) {
+  join([skillName(s) for s <- skills], ", ");
+}
+
+function skillChoice(skill) {
+  choice(skillId(skill), skillName(skill));
+}
+
+function skillChoices(skills) {
+  [skillChoice(s) for s <- skills];
+}
+
+function fightingStyleOptions() {
+  [
+    voption("archery", "Archery", "🏹"),
+    voption("defense", "Defense", "🛡"),
+    voption("dueling", "Dueling", "⚔"),
+    voption("great-weapon", "Great Weapon", "🗡"),
+    voption("protection", "Protection", "✋"),
+    voption("two-weapon", "Two-Weapon", "✦")
+  ];
+}
+
+function clericOrderOptions() {
+  [
+    voption("protector", "Protector", "🛡"),
+    voption("thaumaturge", "Thaumaturge", "✦")
+  ];
+}
+
+function druidOrderOptions() {
+  [
+    voption("magician", "Magician", "✦"),
+    voption("warden", "Warden", "🌿")
+  ];
+}
+
+function lockedClassSkills(build) {
+  speciesSkillProficienciesForBuild(build) + backgroundSkillProficiencies(build.background);
+}
+
+function alphabeticalSkills() {
+  [Acrobatics, AnimalHandling, Arcana, Athletics, Deception, History, Insight, Intimidation, Investigation, Medicine, Nature, Perception, Performance, Persuasion, Religion, SleightOfHand, Stealth, Survival];
+}
+
+function lockedSkillSource(build, skill) {
+  let speciesLocked = hasSelectedClassSkill(skill, speciesSkillProficienciesForBuild(build));
+  let backgroundLocked = hasSelectedClassSkill(skill, backgroundSkillProficiencies(build.background));
+  if speciesLocked && backgroundLocked then
+    speciesName(build.species) + " + " + backgroundName(build.background)
+  else if speciesLocked then
+    speciesName(build.species)
+  else if backgroundLocked then
+    backgroundName(build.background)
+  else
+    "";
+}
+
+function classSkillOptionState(build, skill) {
+  let locked = hasSelectedClassSkill(skill, lockedClassSkills(build));
+  let chosen = hasSelectedClassSkill(skill, build.classOptions.classSkills);
+  let classSkill = hasSelectedClassSkill(skill, classSkillOptions(build.class));
+  if locked then
+    OptionLocked { lockedSkillSource(build, skill) }
+  else if chosen then
+    OptionSelected
+  else if classSkill then
+    OptionAvailable
+  else
+    OptionDisabled;
+}
+
+function classSkillLabel(build, skill) {
+  skillName(skill);
+}
+
+function classSkillChoice(build, skill) {
+  vchoice(skillId(skill), classSkillLabel(build, skill), "•", classSkillOptionState(build, skill));
+}
+
+function classSkillChoices(build) {
+  [classSkillChoice(build, s) for s <- alphabeticalSkills()];
+}
+
+function viewClassSkillSelector(build) {
+  let selected = length(build.classOptions.classSkills);
+  let required = classSkillChoiceCount(build.class);
+  panel("Class skills", [
+    vp([vtext("Choose class skill proficiencies. Orange skills are selected. Locked skills show where they came from, and unavailable skills are disabled.")]),
+    row("Class", className(build.class)),
+    row("Needed", __str__(selected) + " / " + __str__(required)),
+    field("Skills", vchoiceGroup("class-skill", classSkillChoices(build), fn v => SetClassSkill { value = v }))
+  ]);
+}
+
+function viewFightingStyleOption(build) {
+  if hasFightingStyleOption(build.class) then
+    [panel("Fighting style", [
+      vp([vtext("Choose the fighting style this class grants when available at this level.")]),
+      field("Style", voptionButtonGroup("fighting-style", fightingStyleOptions(), fightingStyleId(build.classOptions.fightingStyle), fn v => SetFightingStyle { value = v })),
+      row("Selected", fightingStyleName(build.classOptions.fightingStyle))
+    ])]
+  else
+    [];
+}
+
+function viewClericOrderOption(build) {
+  if hasClericOrderOption(build.class) then
+    [panel("Divine Order", [
+      vp([vtext("Choose the cleric's initial order.")]),
+      field("Order", voptionButtonGroup("cleric-order", clericOrderOptions(), clericOrderId(build.classOptions.clericOrder), fn v => SetClericOrder { value = v })),
+      row("Selected", clericOrderName(build.classOptions.clericOrder))
+    ])]
+  else
+    [];
+}
+
+function viewDruidOrderOption(build) {
+  if hasDruidOrderOption(build.class) then
+    [panel("Primal Order", [
+      vp([vtext("Choose the druid's initial order.")]),
+      field("Order", voptionButtonGroup("druid-order", druidOrderOptions(), druidOrderId(build.classOptions.druidOrder), fn v => SetDruidOrder { value = v })),
+      row("Selected", druidOrderName(build.classOptions.druidOrder))
+    ])]
+  else
+    [];
+}
+
+function viewExpertiseOption(build) {
+  let selectedChoices = skillChoices(build.classOptions.classSkills);
+  if hasExpertiseOption(build.class) then
+    [panel("Expertise", [
+      vp([vtext("Choose which selected class skills receive expertise.")]),
+      field("First expertise", vselect("expertise-one", selectedChoices, skillId(build.classOptions.expertiseSkillOne), fn v => SetExpertiseSkillOne { value = v })),
+      field("Second expertise", vselect("expertise-two", selectedChoices, skillId(build.classOptions.expertiseSkillTwo), fn v => SetExpertiseSkillTwo { value = v }))
+    ])]
+  else
+    [];
+}
+
+function classOptionViews(build) {
+  [viewClassSkillSelector(build)] + viewFightingStyleOption(build) + viewClericOrderOption(build) + viewDruidOrderOption(build) + viewExpertiseOption(build);
+}
+
+function viewBuilderClassOptions(model, view) {
+  let build = model.character.build;
+  panel("Step 3 — Class Options", [
+    vp([vtext("Choose class-specific setup options. These choices are durable build data and feed the computed rules/projection.")]),
+    row("Class", className(build.class))
+  ] + classOptionViews(build) + [
+    vfieldBlock("Selected class options", [
+      row("Options", classOptionsLine(build.class, build.classOptions))
+    ]),
+    vdivClass(["button-row"], [
+      vbutton("Back", backBeforeClassOptionsMessage(build)),
+      vbutton("Next: Abilities", GoAbilities)
+    ])
+  ]);
+}
+
+function viewBuilderSpeciesOptions(model, view) {
+  let build = model.character.build;
+  panel("Step 2 — Species Options", [
+    vp([vtext("Some species have additional setup choices. Species without options skip this page automatically.")]),
+    row("Species", speciesName(build.species))
+  ] + speciesOptionViews(build) + [
+    vdivClass(["button-row"], [
+      vbutton("Back: Identity", GoIdentity),
+      vbutton("Next: Class Options", GoClassOptions)
+    ])
+  ]);
+}
+
+function viewBuilderIdentity(model, view) {
+  let catalog = model.catalog;
+  let build = model.character.build;
+  let speciesId = currentSpeciesId(build.species);
+  let classId = currentClassId(build.class);
+  let backgroundId = currentBackgroundId(build.background);
+  panel("Step 1 — Identity", [
+    vp([vtext("Choose the durable facts that define the character. The sheet updates from these choices instead of storing derived values.")]),
+    field("Name", vinput("name", view.name, "Character name", fn v => SetName { value = v })),
+    field("Gender", genderSelector(build)),
+    row("Name generator", nameSuggestionStatus(build)),
+    vdivClass(["button-row"], [vbutton("Suggest name", SuggestName)]),
+    field("Species", vselect("species", speciesChoices(catalog), speciesId, fn v => SelectSpecies { value = v })),
+    field("Class", vselect("class", classChoices(catalog), classId, fn v => SelectClass { value = v })),
+    field("Background", vselect("background", backgroundChoices(catalog), backgroundId, fn v => SelectBackground { value = v })),
+    field("Level", vinput("level", __str__(build.level), "level", fn v => SetLevel { value = v })),
+    vdivClass(["button-row"], [vbutton("Next", nextAfterIdentityMessage(build))])
+  ]);
+}
+
+
+function abilityChoice(ability) {
+  choice(abilityId(ability), abilityShort(ability) + " — " + abilityName(ability));
+}
+
+function allAbilityChoices() {
+  [abilityChoice(a) for a <- abilities];
+}
+
+function backgroundBonusChoices(background) {
+  [abilityChoice(a) for a <- backgroundAbilityChoices(background)];
+}
+
+function abilityMethodChoices() {
+  [
+    choice("manual", "Manual entry"),
+    choice("standard-array", "Standard array"),
+    choice("point-buy", "Point buy"),
+    choice("roll", "Roll scores")
+  ];
+}
+
+function backgroundBonusModeChoices() {
+  [
+    choice("plus-two-plus-one", "+2 / +1"),
+    choice("plus-one-plus-one-plus-one", "+1 / +1 / +1")
+  ];
+}
+
+function rollModeChoices() {
+  [
+    choice("4d6-drop-lowest", "4d6 drop lowest"),
+    choice("4d6-reroll-ones", "4d6 drop lowest, reroll 1s"),
+    choice("4d6-reroll-one-two", "4d6 drop lowest, reroll 1s and 2s"),
+    choice("3d6", "3d6 straight"),
+    choice("2d6-plus-6", "2d6 + 6")
+  ];
+}
+
+function scoreOption(score) {
+  vchoice(__str__(score), __str__(score), "", OptionAvailable);
+}
+
+function standardScoreUsed(selection, scoreText) {
+  selection.standardStrength == scoreText ||
+  selection.standardDexterity == scoreText ||
+  selection.standardConstitution == scoreText ||
+  selection.standardIntelligence == scoreText ||
+  selection.standardWisdom == scoreText ||
+  selection.standardCharisma == scoreText;
+}
+
+function standardScoreState(selection, scoreText) {
+  if selection.standardSelectedScore == scoreText then
+    OptionSelected
+  else if standardScoreUsed(selection, scoreText) then
+    OptionDisabled
+  else
+    OptionAvailable;
+}
+
+function standardScoreChoice(selection, score) {
+  let value = __str__(score);
+  vchoice(value, value, "", standardScoreState(selection, value));
+}
+
+function standardArrayOptions(selection) {
+  [standardScoreChoice(selection, score) for score <- standardArrayValues()];
+}
+
+function assignedScoreLabel(value) {
+  value == "" ? "—" : value;
+}
+
+function standardAbilityOptionState(selection, value) {
+  selection.standardSelectedScore == "" ? OptionDisabled : OptionAvailable;
+}
+
+function standardAbilityChoice(label, value) {
+  vchoice(value, label, "", OptionAvailable);
+}
+
+function standardAbilityButton(name, label, assigned, msg, selection) {
+  let text = label + " " + assignedScoreLabel(assigned);
+  let state = standardAbilityOptionState(selection, assigned);
+  vchoiceGroup(name, [vchoice(name, text, "", state)], fn v => msg);
+}
+
+function pointBuyAdjust(label, score, decreaseMsg, increaseMsg) {
+  vdivClass(["point-buy-control"], [
+    vspan([vtext(label + " " + __str__(score))]),
+    vbutton("−", decreaseMsg),
+    vbutton("+", increaseMsg),
+    vspan([vtext("cost " + __str__(pointBuyCost(score)))])
+  ]);
+}
+
+function pointBuyCostField(label, score) {
+  row(label, __str__(score) + " costs " + __str__(pointBuyCost(score)));
+}
+
+function backgroundBonusTertiaryField(selection, choices) {
+  if selection.backgroundBonusMode == "plus-one-plus-one-plus-one" then
+    [field("Third +1", vselect("bg-bonus-third", choices, selection.backgroundBonusTertiary, fn v => SetBackgroundBonusTertiary { value = v }))]
+  else
+    [];
+}
+
+function viewBackgroundBonusBuilder(model) {
+  let selection = model.selection;
+  let background = model.character.build.background;
+  let choices = backgroundBonusChoices(background);
+  let tertiary = backgroundBonusTertiaryField(selection, choices);
+  panel("Background ability bonuses", [
+    vp([vtext("Choose how this background's ability score bonuses are assigned. Changes are applied automatically to the current scores.")]),
+    row("Available", backgroundAbilityLine(background)),
+    field("Mode", vselect("background-bonus-mode", backgroundBonusModeChoices(), selection.backgroundBonusMode, fn v => SetBackgroundBonusMode { value = v })),
+    field("Primary", vselect("bg-bonus-primary", choices, selection.backgroundBonusPrimary, fn v => SetBackgroundBonusPrimary { value = v })),
+    field("Secondary", vselect("bg-bonus-secondary", choices, selection.backgroundBonusSecondary, fn v => SetBackgroundBonusSecondary { value = v }))
+  ] + tertiary);
+}
+
+function viewStandardArrayBuilder(model) {
+  let selection = model.selection;
+  panel("Standard array", [
+    vp([vtext("Choose an unassigned score, then choose the ability that receives it. Assigned scores become unavailable until that ability is changed.")]),
+    field("Scores", vchoiceGroup("standard-score", standardArrayOptions(selection), fn v => SelectStandardScore { value = v })),
+    field("Abilities", vdivClass(["choice-grid"], [
+      standardAbilityButton("assign-str", "STR", selection.standardStrength, AssignStandardStrength, selection),
+      standardAbilityButton("assign-dex", "DEX", selection.standardDexterity, AssignStandardDexterity, selection),
+      standardAbilityButton("assign-con", "CON", selection.standardConstitution, AssignStandardConstitution, selection),
+      standardAbilityButton("assign-int", "INT", selection.standardIntelligence, AssignStandardIntelligence, selection),
+      standardAbilityButton("assign-wis", "WIS", selection.standardWisdom, AssignStandardWisdom, selection),
+      standardAbilityButton("assign-cha", "CHA", selection.standardCharisma, AssignStandardCharisma, selection)
+    ])),
+    vdivClass(["button-row"], [vbutton("Use default assignment", ApplyStandardArray)])
+  ]);
+}
+
+function viewPointBuyBuilder(model) {
+  let scores = model.character.build.scores;
+  panel("Point buy", [
+    vp([vtext("Use +/− to adjust point-buy scores from 8 to 15. Background bonuses stay applied automatically.")]),
+    pointBuyAdjust("STR", scores.strength, DecreaseStrength, IncreaseStrength),
+    pointBuyAdjust("DEX", scores.dexterity, DecreaseDexterity, IncreaseDexterity),
+    pointBuyAdjust("CON", scores.constitution, DecreaseConstitution, IncreaseConstitution),
+    pointBuyAdjust("INT", scores.intelligence, DecreaseIntelligence, IncreaseIntelligence),
+    pointBuyAdjust("WIS", scores.wisdom, DecreaseWisdom, IncreaseWisdom),
+    pointBuyAdjust("CHA", scores.charisma, DecreaseCharisma, IncreaseCharisma),
+    vfieldBlock("Point buy budget", [
+      row("Budget", pointBuyStatus(scores))
+    ]),
+    vdivClass(["button-row"], [vbutton("Reset point buy", ResetPointBuy)])
+  ]);
+}
+
+function viewRollBuilder(model) {
+  let selection = model.selection;
+  panel("Roll ability scores", [
+    vp([vtext("Roll all six scores using the selected method. Rolls use the runtime random library instead of a known seed.")]),
+    field("Roll mode", vselect("roll-mode", rollModeChoices(), selection.rollMode, fn v => SetRollMode { value = v })),
+    row("Last roll", selection.rollSummary),
+    vdivClass(["button-row"], [vbutton("Roll ability scores", RollAbilityScores)])
+  ]);
+}
+
+function viewAbilityMethodPanel(model) {
+  let method = model.selection.abilityMethod;
+  if method == "standard-array" then
+    viewStandardArrayBuilder(model)
+  else if method == "point-buy" then
+    viewPointBuyBuilder(model)
+  else if method == "roll" then
+    viewRollBuilder(model)
+  else
+    panel("Manual entry", [vp([vtext("Edit the six scores directly. This is also useful after applying a standard array, point buy reset, background bonuses, or rolled scores.")])]);
+}
+
+function viewBuilderAbilities(model, view) {
+  let scores = model.character.build.scores;
+  panel("Step 4 — Ability Scores", [
+    vp([vtext("Choose an ability-score workflow, then edit the six scores. Modifiers, skills, saves, AC, initiative, and carrying capacity are derived from the resulting build.")]),
+    field("Method", vselect("ability-method", abilityMethodChoices(), model.selection.abilityMethod, fn v => SetAbilityMethod { value = v })),
+    vdivClass(["scores"], [
+      field("STR", scoreInput("strength", scores.strength, fn v => SetStrength { value = v })),
+      field("DEX", scoreInput("dexterity", scores.dexterity, fn v => SetDexterity { value = v })),
+      field("CON", scoreInput("constitution", scores.constitution, fn v => SetConstitution { value = v })),
+      field("INT", scoreInput("intelligence", scores.intelligence, fn v => SetIntelligence { value = v })),
+      field("WIS", scoreInput("wisdom", scores.wisdom, fn v => SetWisdom { value = v })),
+      field("CHA", scoreInput("charisma", scores.charisma, fn v => SetCharisma { value = v }))
+    ]),
+    vfieldBlock("Derived preview", [
+      row("Initiative", formatMod(view.initiativeMod)),
+      row("Passive Perception", __str__(view.passivePerception)),
+      row("Carrying", __str__(view.carryingCapacity)),
+      row("Point buy", pointBuyStatus(scores))
+    ]),
+    viewAbilityMethodPanel(model),
+    viewBackgroundBonusBuilder(model),
+    vdivClass(["button-row"], [
+      vbutton("Back: Class Options", GoClassOptions),
+      vbutton("Next: Equipment", GoEquipment)
+    ])
+  ]);
+}
+
+function viewBuilderEquipment(model, view) {
+  panel("Step 5 — Equipment", [
+    vp([vtext("Add equipment from the active content catalog. Equipment contributes to the computed sheet through rules and projections.")]),
+    field("Shield", vcheckbox("shield", model.character.build.loadout.hasShield, "Equipped", fn v => ToggleShield { value = v })),
+    viewEquipmentPicker(model, view),
+    viewEquippedEquipment(model),
+    vdivClass(["button-row"], [
+      vbutton("Back: Abilities", GoAbilities),
+      vbutton("Next: Review", GoReview)
+    ])
+  ]);
+}
+
+function viewBuilderReview(model, context, view) {
+  panel("Step 6 — Review", [
+    vp([vtext("Review the computed character before using the play tools. This page is read-only except for returning to earlier steps.")]),
+    vfieldBlock("Summary", [
+      row("Name", view.name),
+      row("Level", __str__(view.level)),
+      row("Species", view.speciesName),
+      row("Species options", speciesOptionsLine(model.character.build.species, model.character.build.speciesOptions)),
+      row("Class", view.className),
+      row("Class options", classOptionsLine(model.character.build.class, model.character.build.classOptions)),
+      row("Background", view.backgroundName)
+    ]),
+    vfieldBlock("Combat preview", [
+      row("HP", __str__(view.currentHp) + "/" + __str__(view.hitPointMax)),
+      row("AC", __str__(view.armorClass)),
+      row("Initiative", formatMod(view.initiativeMod)),
+      row("Proficiency", formatMod(view.proficiencyBonus))
+    ]),
+    vdefinitionList("Traits", traitDefinitionsForView(view.traits)),
+    vdefinitionList("Feats", featDefinitionsForView(view.feats)),
+    vdivClass(["button-row"], [
+      vbutton("Back: Equipment", GoEquipment),
+      vbutton("Go to Play", SetActiveTab { value = "play" })
+    ])
+  ]);
+}
+
+function viewStructuredBuilder(model, context, view) {
+  let step = model.selection.builderStep;
+  panel("Structured builder", [
+    builderStepNav(model.selection, model.character.build),
+    row("Current step", builderStepLabel(step))
+  ]);
+}
+
+function viewBuilderStep(model, context, view) {
+  match model.selection.builderStep with
+  | IdentityStep -> [viewBuilderIdentity(model, view)]
+  | SpeciesOptionsStep -> [viewBuilderSpeciesOptions(model, view)]
+  | ClassOptionsStep -> [viewBuilderClassOptions(model, view)]
+  | AbilitiesStep -> [viewBuilderAbilities(model, view)]
+  | EquipmentStep -> [viewBuilderEquipment(model, view)]
+  | ReviewStep -> [viewBuilderReview(model, context, view)];
+}
+
+function viewBuilder(model, view) {
+  let catalog = model.catalog;
+  let build = model.character.build;
+  let scores = build.scores;
+  let speciesId = currentSpeciesId(build.species);
+  let classId = currentClassId(build.class);
+  let backgroundId = currentBackgroundId(build.background);
+  panel("Builder", [
+    field("Name", vinput("name", view.name, "Character name", fn v => SetName { value = v })),
+    field("Gender", genderSelector(build)),
+    row("Name generator", nameSuggestionStatus(build)),
+    vdivClass(["button-row"], [vbutton("Suggest name", SuggestName)]),
+    field("Species", vselect("species", speciesChoices(catalog), speciesId, fn v => SelectSpecies { value = v })),
+    field("Class", vselect("class", classChoices(catalog), classId, fn v => SelectClass { value = v })),
+    field("Background", vselect("background", backgroundChoices(catalog), backgroundId, fn v => SelectBackground { value = v })),
+    field("Level", vinput("level", __str__(build.level), "level", fn v => SetLevel { value = v })),
+    vdivClass(["scores"], [
+      field("STR", scoreInput("strength", scores.strength, fn v => SetStrength { value = v })),
+      field("DEX", scoreInput("dexterity", scores.dexterity, fn v => SetDexterity { value = v })),
+      field("CON", scoreInput("constitution", scores.constitution, fn v => SetConstitution { value = v })),
+      field("INT", scoreInput("intelligence", scores.intelligence, fn v => SetIntelligence { value = v })),
+      field("WIS", scoreInput("wisdom", scores.wisdom, fn v => SetWisdom { value = v })),
+      field("CHA", scoreInput("charisma", scores.charisma, fn v => SetCharisma { value = v }))
+    ]),
+    field("Shield", vcheckbox("shield", build.loadout.hasShield, "Equipped", fn v => ToggleShield { value = v })),
+    vdivClass(["actions-row"], [vbutton("Reset sample", ResetSample)])
+  ]);
+}
+
+function viewPlayEditor(model, context, projected) {
+  let health = healthView(model.character);
+  let resources = characterResources(model.character, context.rules, model.turn);
+  panel("Play state", [
+    row("Health", health.line),
+    row("Conditions", conditionLine(model.character)),
+    row("Resources", listText(resourceLines(resources))),
+    field("Notes", vinput("notes", model.character.state.notes, "table notes", fn v => SetNotesText { value = v })),
+    field("Damage", vinput("damage", model.damageText, "damage", fn v => SetDamageText { value = v })),
+    vdivClass(["button-row"], [vbutton("Take damage", ApplyDamage)]),
+    field("Healing", vinput("healing", model.healingText, "healing", fn v => SetHealingText { value = v })),
+    vdivClass(["button-row"], [vbutton("Heal", ApplyHealing)]),
+    field("Temp HP", vinput("temp-hp", model.tempText, "temp HP", fn v => SetTempText { value = v })),
+    vdivClass(["button-row"], [vbutton("Gain temp HP", ApplyTempHp)]),
+    vdivClass(["button-row"], [
+      vbutton("Use Sneak Attack", UseSneakAttack),
+      vbutton("Start turn", StartTurn),
+      vbutton("Short rest", ShortRestMsg),
+      vbutton("Long rest", LongRestMsg)
+    ]),
+    viewConditionsEditor(model.character)
+  ]);
+}
+
+function viewStatusPanel(model, context) {
+  let health = healthView(model.character);
+  let resources = characterResources(model.character, context.rules, model.turn);
+  panel("Status", [
+    vfieldBlock("Current state", [
+      row("Health", health.line),
+      row("Conditions", conditionLine(model.character)),
+      row("Resources", listText(resourceLines(resources)))
+    ]),
+    viewConditionsEditor(model.character)
+  ]);
+}
+
+function editorActionViews(actions) {
+  if length(actions) == 0 then
+    [vdivClass(["catalog-item"], [vspan([vtext("No actions available")])])]
+  else
+    [
+      vdivClass(["action-card"], [
+        vdivClass(["action-head"], [
+          vspan([vtext(a.name)]),
+          vspan([vtext(actionTimingName(a.timing))])
+        ]),
+        row("Source", a.source),
+        row("Kind", actionKindName(a.kind)),
+        row("Attack", a.attackBonus == 0 ? "—" : formatMod(a.attackBonus)),
+        row("Damage", a.damageText == "" ? "—" : a.damageText),
+        vp([vtext(a.description)])
+      ])
+      for a <- actions
+    ];
+}
+
+function viewActionsPanel(character, context) {
+  let actions = characterActions(character, context.rules);
+  panel("Actions", [
+    row("Available", __str__(length(actions))),
+    vdivClass(["action-list"], editorActionViews(actions))
+  ]);
+}
+
+function viewSheet(view) {
+  let hpLine = __str__(view.currentHp) + "/" + __str__(view.hitPointMax) + " HP";
+  let tempLine = __str__(view.temporaryHp) + " temp";
+  let levelLine = "Level " + __str__(view.level) + " " + view.speciesName + " " + view.className + ", " + view.backgroundName;
+  panel("Computed sheet", [
+    vh(3, view.name),
+    vp([vtext(levelLine)]),
+    vfieldBlock("Core", [
+      row("Currency", view.currencyText),
+      row("HP", hpLine + " + " + tempLine),
+      row("AC", __str__(view.armorClass)),
+      row("Initiative", formatMod(view.initiativeMod)),
+      row("Proficiency", formatMod(view.proficiencyBonus)),
+      row("Passive Perception", __str__(view.passivePerception)),
+      row("Carrying", __str__(view.carryingCapacity))
+    ]),
+    vfieldBlock("Proficiencies", [
+      row("Saving Throws", listText(view.savingThrows)),
+      row("Skills", listText(view.backgroundSkills)),
+      row("Tools", listText(view.backgroundTools))
+    ]),
+    vdefinitionList("Traits", traitDefinitionsForView(view.traits)),
+    vdefinitionList("Feats", featDefinitionsForView(view.feats)),
+    vfieldBlock("Equipment", [
+      row("Equipment", listText(view.equipment)),
+      row("Weapons", listText(weaponLines(view.weapons))),
+      row("Rule Bonuses", listText(bonusLines(view.bonuses)))
+    ])
+  ]);
+}
+
+function activeEditorViews(model, context, projected) {
+  let tab = model.selection.activeTab;
+  if tab == "builder" then
+    [viewStructuredBuilder(model, context, projected)] + viewBuilderStep(model, context, projected)
+  else if tab == "play" then
+    [viewPlayEditor(model, context, projected)]
+  else
+    [viewSheet(projected)];
+}
+
+function styleBlock() {
+  vcontent(RawHtml { "<style>:root {  --cf-bg: #020617;  --cf-bg-soft: #0f172a;  --cf-surface: rgba(15, 23, 42, 0.92);  --cf-surface-raised: rgba(30, 41, 59, 0.94);  --cf-surface-subtle: rgba(15, 23, 42, 0.72);  --cf-border: #334155;  --cf-border-strong: #475569;  --cf-text: #e2e8f0;  --cf-text-muted: #94a3b8;  --cf-text-soft: #cbd5e1;  --cf-accent: #f97316;  --cf-accent-hover: #fb923c;  --cf-accent-soft: rgba(249, 115, 22, 0.14);  --cf-accent-border: rgba(251, 146, 60, 0.42);  --cf-danger: #f43f5e;  --cf-radius: 18px;  --cf-radius-sm: 12px;  --cf-shadow: 0 20px 45px rgba(0, 0, 0, 0.28);  --cf-shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.18);}#pfun-output {  white-space: normal !important;  line-height: 1.45;}* {  box-sizing: border-box;}body {  margin: 0;  background:    radial-gradient(circle at top left, rgba(249, 115, 22, 0.22), transparent 34rem),    radial-gradient(circle at bottom right, rgba(30, 64, 175, 0.16), transparent 32rem),    var(--cf-bg);  color: var(--cf-text);  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, \"Helvetica Neue\", Arial, sans-serif;}body::-webkit-scrollbar,#pfun-output *::-webkit-scrollbar {  width: 8px;  height: 8px;}body::-webkit-scrollbar-track,#pfun-output *::-webkit-scrollbar-track {  background: var(--cf-bg-soft);}body::-webkit-scrollbar-thumb,#pfun-output *::-webkit-scrollbar-thumb {  background: var(--cf-border);  border-radius: 999px;}body::-webkit-scrollbar-thumb:hover,#pfun-output *::-webkit-scrollbar-thumb:hover {  background: var(--cf-border-strong);}.app {  max-width: 1500px;  margin: 0 auto;  padding: 28px;  color: var(--cf-text);}.hero {  position: sticky;  top: 0;  z-index: 5;  margin: -28px -28px 22px;  padding: 24px 28px 18px;  border-bottom: 1px solid rgba(51, 65, 85, 0.7);  background: linear-gradient(180deg, rgba(2, 6, 23, 0.97), rgba(2, 6, 23, 0.82));  backdrop-filter: blur(16px);}.hero h1 {  margin: 0;  font-size: clamp(2rem, 4vw, 3.25rem);  line-height: 1;  letter-spacing: -0.055em;  color: #f8fafc;}.hero p {  max-width: 860px;  margin: 10px 0 0;  color: var(--cf-text-muted);}.layout {  display: grid;  grid-template-columns: minmax(230px, 280px) minmax(380px, 1fr) minmax(380px, 1fr);  gap: 20px;  align-items: start;}.sidebar,.middle-pane,.right-pane {  min-width: 0;  display: flex;  flex-direction: column;  gap: 20px;}.pf-card {  position: relative;  display: block;  overflow: visible;  padding: 18px;  border: 1px solid rgba(51, 65, 85, 0.92);  border-radius: var(--cf-radius);  background: linear-gradient(180deg, var(--cf-surface-raised), var(--cf-surface));  box-shadow: var(--cf-shadow-soft);}.pf-card::before {  content: \"\";  position: absolute;  inset: 0;  pointer-events: none;  border-radius: inherit;  border-top: 1px solid rgba(255, 255, 255, 0.08);}.pf-card h2 {  margin: 0 0 14px;  font-size: 1rem;  letter-spacing: 0.08em;  text-transform: uppercase;  color: #f8fafc;}.pf-card h3 {  margin: 18px 0 8px;  font-size: 0.82rem;  letter-spacing: 0.08em;  text-transform: uppercase;  color: var(--cf-text-soft);}.field {  display: grid;  grid-template-columns: 118px minmax(0, 1fr);  gap: 12px;  align-items: center;  margin: 10px 0;}.field-label {  font-size: 0.78rem;  font-weight: 800;  letter-spacing: 0.07em;  text-transform: uppercase;  color: var(--cf-text-muted);}.scores {  display: grid;  grid-template-columns: 1fr 1fr;  gap: 8px 14px;  margin: 14px 0;  padding: 12px;  border: 1px solid rgba(51, 65, 85, 0.74);  border-radius: var(--cf-radius-sm);  background: rgba(2, 6, 23, 0.28);}.scores .field {  grid-template-columns: 48px minmax(0, 1fr);  margin: 0;}.pf-field {  display: flex;  justify-content: space-between;  gap: 18px;  align-items: flex-start;  padding: 9px 0;  border-bottom: 1px solid rgba(51, 65, 85, 0.72);}.pf-field:last-child {  border-bottom: 0;}.pf-field-label {  font-size: 0.76rem;  font-weight: 800;  letter-spacing: 0.07em;  text-transform: uppercase;  color: var(--cf-text-muted);}.pf-field-value {  text-align: right;  color: #f8fafc;  overflow-wrap: anywhere;}.pf-field-block {  margin: 12px 0;  padding: 12px;  border: 1px solid rgba(51, 65, 85, 0.74);  border-radius: var(--cf-radius-sm);  background: rgba(2, 6, 23, 0.28);}.pf-field-block h3 {  margin-top: 0;}.builder-steps {  display: grid;  grid-template-columns: repeat(4, minmax(0, 1fr));  gap: 8px;  margin: 10px 0 14px;}.builder-step button {  width: 100%;  min-height: 44px;}.builder-step.selected button {  background: linear-gradient(135deg, var(--cf-accent), #ea580c);  color: #111827;  border-color: var(--cf-accent-hover);  box-shadow: 0 0 0 3px var(--cf-accent-soft);}.actions-row,.button-row {  display: flex;  gap: 10px;  flex-wrap: wrap;  margin: 10px 0;}.character-list,.catalog-list,.action-list {  display: flex;  flex-direction: column;  gap: 9px;  margin-top: 10px;}.character-row button {  width: 100%;  justify-content: flex-start;  text-align: left;  background: rgba(15, 23, 42, 0.85);  color: var(--cf-text);  border-color: rgba(51, 65, 85, 0.9);}.character-row.selected button {  background: linear-gradient(135deg, var(--cf-accent), #ea580c);  color: #111827;  border-color: var(--cf-accent-hover);  box-shadow: 0 0 0 3px var(--cf-accent-soft);}.catalog-item,.action-card {  border: 1px solid rgba(51, 65, 85, 0.85);  border-radius: var(--cf-radius-sm);  background: var(--cf-surface-subtle);}.catalog-item {  display: flex;  justify-content: space-between;  gap: 12px;  align-items: center;  min-width: 0;  padding: 9px 11px;}.catalog-item span {  overflow-wrap: anywhere;}.action-card {  padding: 12px;}.action-head {  display: flex;  justify-content: space-between;  gap: 12px;  margin-bottom: 8px;  font-weight: 900;  color: #f8fafc;}.status {  margin-top: 12px;  color: var(--cf-accent-hover);  font-weight: 700;}input,select,button {  max-width: 100%;  padding: 9px 11px;  border-radius: 10px;  border: 1px solid rgba(71, 85, 105, 0.9);  background: #020617;  color: var(--cf-text);  font: inherit;}input::placeholder {  color: #64748b;}input:focus,select:focus,button:focus-visible {  outline: none;  border-color: var(--cf-accent-hover);  box-shadow: 0 0 0 3px var(--cf-accent-soft);}button {  cursor: pointer;  font-weight: 800;  background: linear-gradient(180deg, #1e293b, #0f172a);  color: var(--cf-text);  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;}button:hover {  transform: translateY(-1px);  border-color: var(--cf-accent-border);  background: linear-gradient(180deg, #334155, #1e293b);}.pf-option-group {  display: flex;  flex-wrap: wrap;  gap: 10px;  margin: 10px 0 14px;}.pf-option-button {  min-width: 96px;  min-height: 74px;  display: inline-flex;  flex-direction: column;  align-items: center;  justify-content: center;  gap: 6px;  padding: 12px 14px;  border: 1px solid rgba(71, 85, 105, 0.9);  border-radius: var(--cf-radius-sm);  background: linear-gradient(180deg, rgba(30, 41, 59, 0.92), rgba(15, 23, 42, 0.96));  color: var(--cf-text);  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);}.pf-option-button:hover {  border-color: var(--cf-accent-border);  background: linear-gradient(180deg, rgba(51, 65, 85, 0.96), rgba(30, 41, 59, 0.96));}.pf-option-button.pf-option-selected {  background: linear-gradient(135deg, var(--cf-accent), #ea580c);  color: #111827;  border-color: var(--cf-accent-hover);  box-shadow: 0 0 0 3px var(--cf-accent-soft), inset 0 0 0 2px rgba(255, 255, 255, 0.28);  transform: translateY(-1px);}.pf-option-icon {  display: block;  font-size: 1.4rem;  line-height: 1;}.pf-option-label {  display: block;  font-size: 0.78rem;  font-weight: 900;  letter-spacing: 0.06em;  text-transform: uppercase;}.pf-option-selected .pf-option-icon,.pf-option-selected .pf-option-label {  color: #111827;}.pf-option-button.pf-option-disabled {  opacity: 0.38;  cursor: not-allowed;  transform: none;  background: rgba(15, 23, 42, 0.55);  color: var(--cf-text-muted);}.pf-option-button.pf-option-disabled:hover {  transform: none;  border-color: rgba(71, 85, 105, 0.9);  background: rgba(15, 23, 42, 0.55);}.pf-option-button.pf-option-locked {  cursor: not-allowed;}.pf-option-caption {  display: block;  margin-top: 2px;  font-size: 0.68rem;  font-weight: 900;  letter-spacing: 0.05em;  text-transform: uppercase;  opacity: 0.82;}.pf-card .button-row > button:first-child,.pf-card .actions-row > button:first-child {  background: linear-gradient(135deg, var(--cf-accent), #ea580c);  color: #111827;  border-color: var(--cf-accent-hover);}label {  color: var(--cf-text-muted);  font-size: 0.85rem;  font-weight: 700;}@media (max-width: 1180px) {  .layout {    grid-template-columns: 1fr 1fr;  }  .sidebar {    grid-column: 1 / -1;  }}@media (max-width: 780px) {  .app {    padding: 18px;  }  .hero {    margin: -18px -18px 18px;    padding: 20px 18px 16px;  }  .layout {    grid-template-columns: 1fr;  }  .field {    grid-template-columns: 1fr;  }  .scores {    grid-template-columns: 1fr;  }}</style>" });
+}
+
+function view(model) {
+  let context = contextForCharacter(model.catalog, model.character);
+  let projected = projectCharacter(model.character, context);
+  vdivClass(["app"], [
+    styleBlock(),
+    vdivClass(["hero"], [
+      vh(1, "Character Forge / Pfun"),
+      vp([vtext("Tiny TEA editor pass. Build, play state, resources, conditions, and editor state stay separate; the sheet is recomputed from pure functions.")]),
+      vdivClass(["status"], [vtext(model.status)])
+    ]),
+    vdivClass(["layout"], [
+      vdivClass(["sidebar"], [viewCharacterList(model), viewContentPacks(model), viewSaveLoad(model)]),
+      vdivClass(["middle-pane"], [viewBuilderSelection(model)] + activeEditorViews(model, context, projected)),
+      vdivClass(["right-pane"], [
+        viewStatusPanel(model, context),
+        viewActionsPanel(model.character, context),
+        viewSheet(projected)
+      ])
+    ])
+  ]);
+}
+

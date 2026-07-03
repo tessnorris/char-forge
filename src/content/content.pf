@@ -1,0 +1,969 @@
+// Character Forge content catalog
+//
+// The catalog now has one canonical ContentDefinition shape with an exhaustive
+// ContentKind union. Older kind-specific records still carry engine/rule payloads
+// for this pass, but browsing/search/pack metadata operate over ContentDefinition.
+
+import * from "../character/abilities";
+import * from "../character/character";
+import * from "../character/feats";
+import * from "../character/traits";
+
+export type ContentSource = {
+  | BuiltInContent
+  | HomebrewContent
+}
+
+export type ContentKind = {
+  | SpeciesContent
+  | ClassContent
+  | BackgroundContent
+  | WeaponContent
+  | ArmorContent
+  | ToolContent
+  | GearContent
+  | MagicItemContent
+  | FeatContent
+  | TraitContent
+  | SpellContent
+  | ConditionContent
+}
+
+export type ContentDefinition = { id, name, kind, source, tags, description }
+export type ContentRef = { id, name, kind, source }
+
+// Statically-shaped content-pack entries.
+//
+// Content packs are still data-driven, but they are not arbitrary metadata.
+// Each entry has a ContentDefinition for shared catalog/search behavior plus
+// kind-specific fields that the compiler can check. Runtime/homebrew JSON should
+// decode into these same shapes and fail validation if required fields are
+// missing.
+export type SpeciesContentEntry = { definition, implemented, traitIds }
+export type ClassContentEntry = { definition, implemented, hitDie, primaryAbilities, savingThrowNames, featureIds }
+export type BackgroundContentEntry = { definition, implemented, abilityOptions, skillNames, toolIds, originFeatId, equipmentIds }
+export type FeatContentEntry = { definition, implemented, featKind, prerequisite, grants }
+export type TraitContentEntry = { definition, traitSource, grants }
+export type WeaponContentEntry = { definition, implemented, damage, abilityName, properties }
+export type ArmorContentEntry = { definition, implemented, baseAc, dexLimit, category }
+export type ToolContentEntry = { definition, implemented, category }
+export type GearContentEntry = { definition, implemented, category }
+export type MagicItemContentEntry = { definition, implemented, rarity, grants }
+export type SpellContentEntry = { definition, implemented, level, school }
+export type ConditionContentEntry = { definition, implemented, grants }
+
+export type SpeciesDefinition = { id, name, skills, tools, features, bonuses, source }
+export type ClassDefinition = { id, name, hitDie, saves, skills, armor, weapons, features, bonuses, source }
+export type BackgroundDefinition = { id, name, skills, tools, traits, feats, features, bonuses, source }
+export type WeaponDefinition = { id, name, weapon, ability, damage, bonuses, source }
+export type ArmorDefinition = { id, name, armor, baseAc, dexLimit, bonuses, source }
+export type ToolDefinition = { id, name, tool, source }
+export type GearDefinition = { id, name, gear, source }
+export type MagicItemDefinition = { id, name, description, bonuses, source }
+
+export type ContentCatalog = { definitions, speciesEntries, classEntries, backgroundEntries, featEntries, traitEntries, weaponEntries, armorEntries, toolEntries, gearEntries, magicItemEntries, spellEntries, conditionEntries, species, classes, backgrounds, weapons, armor, tools, gear, magicItems, feats }
+
+export function sourceName(source) {
+  match source with
+  | BuiltInContent -> "built-in"
+  | HomebrewContent -> "homebrew";
+}
+
+export function contentKindName(kind) {
+  match kind with
+  | SpeciesContent -> "species"
+  | ClassContent -> "class"
+  | BackgroundContent -> "background"
+  | WeaponContent -> "weapon"
+  | ArmorContent -> "armor"
+  | ToolContent -> "tool"
+  | GearContent -> "gear"
+  | MagicItemContent -> "magic item"
+  | FeatContent -> "feat"
+  | TraitContent -> "trait"
+  | SpellContent -> "spell"
+  | ConditionContent -> "condition";
+}
+
+export function contentDefinition(id, name, kind, source, tags, description) {
+  ContentDefinition(id = id, name = name, kind = kind, source = source, tags = tags, description = description);
+}
+
+export function core2024Metadata(id, name, kind, tags, description) {
+  contentDefinition(id, name, kind, BuiltInContent, tags, description);
+}
+
+export function speciesContentEntry(def, implemented, traitIds) {
+  SpeciesContentEntry(definition = def, implemented = implemented, traitIds = traitIds);
+}
+
+export function classContentEntry(def, implemented, hitDie, primaryAbilities, savingThrowNames, featureIds) {
+  ClassContentEntry(definition = def, implemented = implemented, hitDie = hitDie, primaryAbilities = primaryAbilities, savingThrowNames = savingThrowNames, featureIds = featureIds);
+}
+
+export function backgroundContentEntry(def, implemented, abilityOptions, skillNames, toolIds, originFeatId, equipmentIds) {
+  BackgroundContentEntry(definition = def, implemented = implemented, abilityOptions = abilityOptions, skillNames = skillNames, toolIds = toolIds, originFeatId = originFeatId, equipmentIds = equipmentIds);
+}
+
+export function featContentEntry(def, implemented, featKind, prerequisite, grants) {
+  FeatContentEntry(definition = def, implemented = implemented, featKind = featKind, prerequisite = prerequisite, grants = grants);
+}
+
+export function traitContentEntry(def, traitSource, grants) {
+  TraitContentEntry(definition = def, traitSource = traitSource, grants = grants);
+}
+
+export function weaponContentEntry(def, implemented, damage, abilityName, properties) {
+  WeaponContentEntry(definition = def, implemented = implemented, damage = damage, abilityName = abilityName, properties = properties);
+}
+
+export function armorContentEntry(def, implemented, baseAc, dexLimit, category) {
+  ArmorContentEntry(definition = def, implemented = implemented, baseAc = baseAc, dexLimit = dexLimit, category = category);
+}
+
+export function toolContentEntry(def, implemented, category) {
+  ToolContentEntry(definition = def, implemented = implemented, category = category);
+}
+
+export function gearContentEntry(def, implemented, category) {
+  GearContentEntry(definition = def, implemented = implemented, category = category);
+}
+
+export function magicItemContentEntry(def, implemented, rarity, grants) {
+  MagicItemContentEntry(definition = def, implemented = implemented, rarity = rarity, grants = grants);
+}
+
+export function spellContentEntry(def, implemented, level, school) {
+  SpellContentEntry(definition = def, implemented = implemented, level = level, school = school);
+}
+
+export function conditionContentEntry(def, implemented, grants) {
+  ConditionContentEntry(definition = def, implemented = implemented, grants = grants);
+}
+
+export function definitionRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = def.kind, source = def.source);
+}
+
+export function contentDefinitionLine(def) {
+  let source = sourceName(def.source);
+  let kind = contentKindName(def.kind);
+  def.name + " [" + kind + ":" + def.id + ", " + source + "]";
+}
+
+export function contentRefLine(ref) {
+  let source = sourceName(ref.source);
+  let kind = contentKindName(ref.kind);
+  ref.name + " [" + kind + ":" + ref.id + ", " + source + "]";
+}
+
+export function speciesRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = SpeciesContent, source = def.source);
+}
+
+export function classRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = ClassContent, source = def.source);
+}
+
+export function backgroundRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = BackgroundContent, source = def.source);
+}
+
+export function weaponRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = WeaponContent, source = def.source);
+}
+
+export function armorRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = ArmorContent, source = def.source);
+}
+
+export function toolRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = ToolContent, source = def.source);
+}
+
+export function gearRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = GearContent, source = def.source);
+}
+
+export function magicItemRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = MagicItemContent, source = def.source);
+}
+
+export function featRef(def) {
+  ContentRef(id = def.id, name = def.name, kind = FeatContent, source = BuiltInContent);
+}
+
+export function speciesContent(def) {
+  contentDefinition(def.id, def.name, SpeciesContent, def.source, ["species"], "Playable species content.");
+}
+
+export function classContent(def) {
+  contentDefinition(def.id, def.name, ClassContent, def.source, ["class"], "Playable class content.");
+}
+
+export function backgroundContent(def) {
+  contentDefinition(def.id, def.name, BackgroundContent, def.source, ["background"], "Character background content.");
+}
+
+export function weaponContent(def) {
+  contentDefinition(def.id, def.name, WeaponContent, def.source, ["equipment", "weapon"], def.damage + " damage");
+}
+
+export function armorContent(def) {
+  contentDefinition(def.id, def.name, ArmorContent, def.source, ["equipment", "armor"], "Base AC " + __str__(def.baseAc));
+}
+
+export function toolContent(def) {
+  contentDefinition(def.id, def.name, ToolContent, def.source, ["equipment", "tool"], "Tool proficiency or equipment.");
+}
+
+export function gearContent(def) {
+  contentDefinition(def.id, def.name, GearContent, def.source, ["equipment", "gear"], "Adventuring gear.");
+}
+
+export function magicItemContent(def) {
+  contentDefinition(def.id, def.name, MagicItemContent, def.source, ["equipment", "magic-item"], def.description);
+}
+
+export function featContent(def) {
+  contentDefinition(def.id, def.name, FeatContent, BuiltInContent, ["feat", featKindName(def.kind)], def.summary);
+}
+
+export function traitContent(id, name, source, tags) {
+  contentDefinition(id, name, TraitContent, source, tags, traitDescription(name));
+}
+
+export function definitionsFromTypedEntries(catalog) {
+  let species = [e.definition for e <- catalog.speciesEntries];
+  let classes = [e.definition for e <- catalog.classEntries];
+  let backgrounds = [e.definition for e <- catalog.backgroundEntries];
+  let feats = [e.definition for e <- catalog.featEntries];
+  let traits = [e.definition for e <- catalog.traitEntries];
+  let weapons = [e.definition for e <- catalog.weaponEntries];
+  let armor = [e.definition for e <- catalog.armorEntries];
+  let tools = [e.definition for e <- catalog.toolEntries];
+  let gear = [e.definition for e <- catalog.gearEntries];
+  let magicItems = [e.definition for e <- catalog.magicItemEntries];
+  let spells = [e.definition for e <- catalog.spellEntries];
+  let conditions = [e.definition for e <- catalog.conditionEntries];
+  species + classes + backgrounds + feats + traits + weapons + armor + tools + gear + magicItems + spells + conditions;
+}
+
+export function catalogWithTypedDefinitions(catalog) {
+  ContentCatalog(
+    definitions = definitionsFromTypedEntries(catalog),
+    speciesEntries = catalog.speciesEntries,
+    classEntries = catalog.classEntries,
+    backgroundEntries = catalog.backgroundEntries,
+    featEntries = catalog.featEntries,
+    traitEntries = catalog.traitEntries,
+    weaponEntries = catalog.weaponEntries,
+    armorEntries = catalog.armorEntries,
+    toolEntries = catalog.toolEntries,
+    gearEntries = catalog.gearEntries,
+    magicItemEntries = catalog.magicItemEntries,
+    spellEntries = catalog.spellEntries,
+    conditionEntries = catalog.conditionEntries,
+    species = catalog.species,
+    classes = catalog.classes,
+    backgrounds = catalog.backgrounds,
+    weapons = catalog.weapons,
+    armor = catalog.armor,
+    tools = catalog.tools,
+    gear = catalog.gear,
+    magicItems = catalog.magicItems,
+    feats = catalog.feats
+  );
+}
+
+export function catalogWithDefinitions(catalog) {
+  // Backward-compatible name: definitions are now derived from typed entries.
+  catalogWithTypedDefinitions(catalog);
+}
+
+export function catalogWithExtraDefinitions(catalog, extraDefinitions) {
+  // Legacy helper retained while call sites settle. The extraDefinitions list is
+  // ignored intentionally; content-pack entries should be added through the
+  // typed entry lists instead of arbitrary metadata definitions.
+  catalogWithTypedDefinitions(catalog);
+}
+
+export function allContentDefinitions(catalog) {
+  catalog.definitions;
+}
+
+export function contentDefinitionsByKind(catalog, kind) {
+  filter(fn d => d.kind == kind, catalog.definitions);
+}
+
+export function allContentRefs(catalog) {
+  [definitionRef(d) for d <- catalog.definitions];
+}
+
+export function matchingContentRefs(catalog, id) {
+  let refs = allContentRefs(catalog);
+  filter(fn r => r.id == id, refs);
+}
+
+export function contentNameOrMissing(catalog, id) {
+  let matches = matchingContentRefs(catalog, id);
+  if length(matches) > 0 then {
+    let found = matches[0];
+    found.name;
+  } else {
+    "missing content: " + id;
+  }
+}
+
+export function requireContentName(catalog, id) {
+  contentNameOrMissing(catalog, id);
+}
+
+export function humanDefinition() {
+  SpeciesDefinition(
+    id = "species.human",
+    name = "Human",
+    skills = [],
+    tools = [],
+    features = ["Resourceful"],
+    bonuses = [RuleBonus(target = CarryingCapacityBonus, amount = 15, source = "Resourceful")],
+    source = BuiltInContent
+  );
+}
+
+export function elfDefinition() {
+  SpeciesDefinition(
+    id = "species.elf",
+    name = "Elf",
+    skills = [Perception],
+    tools = [],
+    features = ["Darkvision", "Keen Senses"],
+    bonuses = [RuleBonus(target = PassivePerceptionBonus, amount = 1, source = "Keen Senses")],
+    source = BuiltInContent
+  );
+}
+
+export function dwarfDefinition() {
+  SpeciesDefinition(
+    id = "species.dwarf",
+    name = "Dwarf",
+    skills = [],
+    tools = [],
+    features = ["Darkvision", "Dwarven Resilience"],
+    bonuses = [RuleBonus(target = CarryingCapacityBonus, amount = 30, source = "Dwarven build")],
+    source = BuiltInContent
+  );
+}
+
+export function halflingDefinition() {
+  SpeciesDefinition(
+    id = "species.halfling",
+    name = "Halfling",
+    skills = [],
+    tools = [],
+    features = ["Lucky"],
+    bonuses = [RuleBonus(target = InitiativeBonus, amount = 1, source = "Halfling nimbleness")],
+    source = BuiltInContent
+  );
+}
+
+export function aasimarDefinition() {
+  SpeciesDefinition(id = "species.aasimar", name = "Aasimar", skills = [], tools = [], features = ["Celestial Resistance", "Healing Hands", "Light Bearer"], bonuses = [], source = BuiltInContent);
+}
+
+export function dragonbornDefinition() {
+  SpeciesDefinition(id = "species.dragonborn", name = "Dragonborn", skills = [], tools = [], features = ["Draconic Ancestry", "Breath Weapon", "Damage Resistance"], bonuses = [], source = BuiltInContent);
+}
+
+export function gnomeDefinition() {
+  SpeciesDefinition(id = "species.gnome", name = "Gnome", skills = [], tools = [], features = ["Darkvision", "Gnomish Cunning"], bonuses = [], source = BuiltInContent);
+}
+
+export function goliathDefinition() {
+  SpeciesDefinition(id = "species.goliath", name = "Goliath", skills = [], tools = [], features = ["Giant Ancestry", "Powerful Build"], bonuses = [RuleBonus(target = CarryingCapacityBonus, amount = 30, source = "Powerful Build")], source = BuiltInContent);
+}
+
+export function orcDefinition() {
+  SpeciesDefinition(id = "species.orc", name = "Orc", skills = [], tools = [], features = ["Adrenaline Rush", "Powerful Build"], bonuses = [RuleBonus(target = CarryingCapacityBonus, amount = 30, source = "Powerful Build")], source = BuiltInContent);
+}
+
+export function tieflingDefinition() {
+  SpeciesDefinition(id = "species.tiefling", name = "Tiefling", skills = [], tools = [], features = ["Darkvision", "Fiendish Legacy", "Otherworldly Presence"], bonuses = [], source = BuiltInContent);
+}
+
+export function fighterDefinition() {
+  ClassDefinition(
+    id = "class.fighter",
+    name = "Fighter",
+    hitDie = 10,
+    saves = [Strength, Constitution],
+    skills = [Athletics],
+    armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail, ChainMail],
+    weapons = [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow],
+    features = ["Fighting Style", "Second Wind", "Action Surge"],
+    bonuses = [RuleBonus(target = ArmorClassBonus, amount = 1, source = "Defensive fighting style")],
+    source = BuiltInContent
+  );
+}
+
+export function rogueDefinition() {
+  ClassDefinition(
+    id = "class.rogue",
+    name = "Rogue",
+    hitDie = 8,
+    saves = [Dexterity, Intelligence],
+    skills = [Stealth, SleightOfHand],
+    armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor],
+    weapons = [Club, Dagger, Quarterstaff, Shortsword, Shortbow],
+    features = ["Expertise", "Sneak Attack", "Thieves' Cant", "Cunning Action"],
+    bonuses = [RuleBonus(target = StealthBonus, amount = 2, source = "Expertise")],
+    source = BuiltInContent
+  );
+}
+
+export function wizardDefinition() {
+  ClassDefinition(
+    id = "class.wizard",
+    name = "Wizard",
+    hitDie = 6,
+    saves = [Intelligence, Wisdom],
+    skills = [Arcana],
+    armor = [],
+    weapons = [Dagger, Quarterstaff],
+    features = ["Spellcasting", "Arcane Recovery"],
+    bonuses = [],
+    source = BuiltInContent
+  );
+}
+
+export function clericDefinition() {
+  ClassDefinition(
+    id = "class.cleric",
+    name = "Cleric",
+    hitDie = 8,
+    saves = [Wisdom, Charisma],
+    skills = [Religion],
+    armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail],
+    weapons = [Club, Dagger, Quarterstaff],
+    features = ["Spellcasting", "Channel Divinity"],
+    bonuses = [],
+    source = BuiltInContent
+  );
+}
+
+export function barbarianDefinition() {
+  ClassDefinition(id = "class.barbarian", name = "Barbarian", hitDie = 12, saves = [Strength, Constitution], skills = [Athletics], armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail], weapons = [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow], features = ["Rage", "Unarmored Defense", "Weapon Mastery"], bonuses = [], source = BuiltInContent);
+}
+
+export function bardDefinition() {
+  ClassDefinition(id = "class.bard", name = "Bard", hitDie = 8, saves = [Dexterity, Charisma], skills = [Performance], armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor], weapons = [Club, Dagger, Quarterstaff, Shortsword, Shortbow], features = ["Bardic Inspiration", "Spellcasting", "Expertise"], bonuses = [], source = BuiltInContent);
+}
+
+export function druidDefinition() {
+  ClassDefinition(id = "class.druid", name = "Druid", hitDie = 8, saves = [Intelligence, Wisdom], skills = [Nature], armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor], weapons = [Club, Dagger, Quarterstaff, Shortbow], features = ["Spellcasting", "Druidic", "Wild Shape"], bonuses = [], source = BuiltInContent);
+}
+
+export function monkDefinition() {
+  ClassDefinition(id = "class.monk", name = "Monk", hitDie = 8, saves = [Strength, Dexterity], skills = [Acrobatics], armor = [], weapons = [Club, Dagger, Quarterstaff, Shortsword, Shortbow], features = ["Martial Arts", "Unarmored Defense", "Focus"], bonuses = [], source = BuiltInContent);
+}
+
+export function paladinDefinition() {
+  ClassDefinition(id = "class.paladin", name = "Paladin", hitDie = 10, saves = [Wisdom, Charisma], skills = [Persuasion], armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail, ChainMail], weapons = [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow], features = ["Lay on Hands", "Spellcasting", "Divine Smite"], bonuses = [], source = BuiltInContent);
+}
+
+export function rangerDefinition() {
+  ClassDefinition(id = "class.ranger", name = "Ranger", hitDie = 10, saves = [Strength, Dexterity], skills = [Survival], armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail], weapons = [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow], features = ["Spellcasting", "Favored Enemy", "Weapon Mastery"], bonuses = [], source = BuiltInContent);
+}
+
+export function sorcererDefinition() {
+  ClassDefinition(id = "class.sorcerer", name = "Sorcerer", hitDie = 6, saves = [Constitution, Charisma], skills = [Arcana], armor = [], weapons = [Dagger, Quarterstaff], features = ["Spellcasting", "Innate Sorcery"], bonuses = [], source = BuiltInContent);
+}
+
+export function warlockDefinition() {
+  ClassDefinition(id = "class.warlock", name = "Warlock", hitDie = 8, saves = [Wisdom, Charisma], skills = [Arcana], armor = [PaddedArmor, LeatherArmor, StuddedLeatherArmor], weapons = [Dagger, Quarterstaff], features = ["Pact Magic", "Eldritch Invocations"], bonuses = [], source = BuiltInContent);
+}
+
+export function acolyteDefinition() {
+  BackgroundDefinition(
+    id = "background.acolyte",
+    name = "Acolyte",
+    skills = [Insight, Religion],
+    tools = [],
+    traits = [],
+    feats = ["Magic Initiate"],
+    features = ["Magic Initiate"],
+    bonuses = [RuleBonus(target = ReligionBonus, amount = 1, source = "Temple training")],
+    source = BuiltInContent
+  );
+}
+
+export function criminalDefinition() {
+  BackgroundDefinition(
+    id = "background.criminal",
+    name = "Criminal",
+    skills = [Stealth, SleightOfHand],
+    tools = [ThievesTools],
+    traits = [],
+    feats = ["Alert"],
+    features = ["Alert"],
+    bonuses = [],
+    source = BuiltInContent
+  );
+}
+
+export function sageDefinition() {
+  BackgroundDefinition(
+    id = "background.sage",
+    name = "Sage",
+    skills = [Arcana, History],
+    tools = [],
+    traits = [],
+    feats = ["Magic Initiate"],
+    features = ["Magic Initiate"],
+    bonuses = [RuleBonus(target = HistoryBonus, amount = 1, source = "Research habit")],
+    source = BuiltInContent
+  );
+}
+
+export function soldierDefinition() {
+  BackgroundDefinition(
+    id = "background.soldier",
+    name = "Soldier",
+    skills = [Athletics, Intimidation],
+    tools = [PlayingCards],
+    traits = [],
+    feats = ["Savage Attacker"],
+    features = ["Savage Attacker"],
+    bonuses = [RuleBonus(target = AthleticsBonus, amount = 1, source = "Military drills")],
+    source = BuiltInContent
+  );
+}
+
+export function artisanDefinition() {
+  BackgroundDefinition(id = "background.artisan", name = "Artisan", skills = [Investigation, Persuasion], tools = [], traits = [], feats = ["Crafter"], features = ["Crafter"], bonuses = [RuleBonus(target = InvestigationBonus, amount = 1, source = "Artisan practice")], source = BuiltInContent);
+}
+
+export function charlatanDefinition() {
+  BackgroundDefinition(id = "background.charlatan", name = "Charlatan", skills = [Deception, SleightOfHand], tools = [DisguiseKit], traits = [], feats = ["Skilled"], features = ["Skilled"], bonuses = [RuleBonus(target = DeceptionBonus, amount = 1, source = "Charlatan practice")], source = BuiltInContent);
+}
+
+export function entertainerDefinition() {
+  BackgroundDefinition(id = "background.entertainer", name = "Entertainer", skills = [Acrobatics, Performance], tools = [], traits = [], feats = ["Musician"], features = ["Musician"], bonuses = [RuleBonus(target = PerformanceBonus, amount = 1, source = "Entertainer practice")], source = BuiltInContent);
+}
+
+export function farmerDefinition() {
+  BackgroundDefinition(id = "background.farmer", name = "Farmer", skills = [AnimalHandling, Nature], tools = [], traits = [], feats = ["Tough"], features = ["Tough"], bonuses = [RuleBonus(target = AnimalHandlingBonus, amount = 1, source = "Farmer practice")], source = BuiltInContent);
+}
+
+export function guardDefinition() {
+  BackgroundDefinition(id = "background.guard", name = "Guard", skills = [Athletics, Perception], tools = [PlayingCards], traits = [], feats = ["Alert"], features = ["Alert"], bonuses = [RuleBonus(target = PerceptionBonus, amount = 1, source = "Guard practice")], source = BuiltInContent);
+}
+
+export function guideDefinition() {
+  BackgroundDefinition(id = "background.guide", name = "Guide", skills = [Stealth, Survival], tools = [], traits = [], feats = ["Magic Initiate"], features = ["Magic Initiate"], bonuses = [RuleBonus(target = SurvivalBonus, amount = 1, source = "Guide practice")], source = BuiltInContent);
+}
+
+export function hermitDefinition() {
+  BackgroundDefinition(id = "background.hermit", name = "Hermit", skills = [Medicine, Religion], tools = [HerbalismKit], traits = [], feats = ["Healer"], features = ["Healer"], bonuses = [RuleBonus(target = MedicineBonus, amount = 1, source = "Hermit practice")], source = BuiltInContent);
+}
+
+export function merchantDefinition() {
+  BackgroundDefinition(id = "background.merchant", name = "Merchant", skills = [AnimalHandling, Persuasion], tools = [], traits = [], feats = ["Lucky"], features = ["Lucky"], bonuses = [RuleBonus(target = PersuasionBonus, amount = 1, source = "Merchant practice")], source = BuiltInContent);
+}
+
+export function nobleDefinition() {
+  BackgroundDefinition(id = "background.noble", name = "Noble", skills = [History, Persuasion], tools = [PlayingCards], traits = [], feats = ["Skilled"], features = ["Skilled"], bonuses = [RuleBonus(target = HistoryBonus, amount = 1, source = "Noble education")], source = BuiltInContent);
+}
+
+export function sailorDefinition() {
+  BackgroundDefinition(id = "background.sailor", name = "Sailor", skills = [Acrobatics, Perception], tools = [], traits = [], feats = ["Tavern Brawler"], features = ["Tavern Brawler"], bonuses = [RuleBonus(target = AcrobaticsBonus, amount = 1, source = "Sailor practice")], source = BuiltInContent);
+}
+
+export function scribeDefinition() {
+  BackgroundDefinition(id = "background.scribe", name = "Scribe", skills = [Investigation, Perception], tools = [], traits = [], feats = ["Skilled"], features = ["Skilled"], bonuses = [RuleBonus(target = InvestigationBonus, amount = 1, source = "Scribe practice")], source = BuiltInContent);
+}
+
+export function wayfarerDefinition() {
+  BackgroundDefinition(id = "background.wayfarer", name = "Wayfarer", skills = [Insight, Stealth], tools = [ThievesTools], traits = [], feats = ["Lucky"], features = ["Lucky"], bonuses = [RuleBonus(target = StealthBonus, amount = 1, source = "Wayfarer practice")], source = BuiltInContent);
+}
+
+export function clubDefinition() {
+  WeaponDefinition(id = "weapon.club", name = "Club", weapon = Club, ability = Strength, damage = "1d4", bonuses = [], source = BuiltInContent);
+}
+
+export function daggerDefinition() {
+  WeaponDefinition(id = "weapon.dagger", name = "Dagger", weapon = Dagger, ability = Dexterity, damage = "1d4", bonuses = [], source = BuiltInContent);
+}
+
+export function quarterstaffDefinition() {
+  WeaponDefinition(id = "weapon.quarterstaff", name = "Quarterstaff", weapon = Quarterstaff, ability = Strength, damage = "1d6", bonuses = [], source = BuiltInContent);
+}
+
+export function shortswordDefinition() {
+  WeaponDefinition(id = "weapon.shortsword", name = "Shortsword", weapon = Shortsword, ability = Dexterity, damage = "1d6", bonuses = [], source = BuiltInContent);
+}
+
+export function longswordDefinition() {
+  WeaponDefinition(id = "weapon.longsword", name = "Longsword", weapon = Longsword, ability = Strength, damage = "1d8", bonuses = [], source = BuiltInContent);
+}
+
+export function shortbowDefinition() {
+  WeaponDefinition(id = "weapon.shortbow", name = "Shortbow", weapon = Shortbow, ability = Dexterity, damage = "1d6", bonuses = [], source = BuiltInContent);
+}
+
+export function longbowDefinition() {
+  WeaponDefinition(id = "weapon.longbow", name = "Longbow", weapon = Longbow, ability = Dexterity, damage = "1d8", bonuses = [], source = BuiltInContent);
+}
+
+export function paddedArmorDefinition() {
+  ArmorDefinition(id = "armor.padded", name = "Padded armor", armor = PaddedArmor, baseAc = 11, dexLimit = 99, bonuses = [], source = BuiltInContent);
+}
+
+export function leatherArmorDefinition() {
+  ArmorDefinition(id = "armor.leather", name = "Leather armor", armor = LeatherArmor, baseAc = 11, dexLimit = 99, bonuses = [], source = BuiltInContent);
+}
+
+export function studdedLeatherArmorDefinition() {
+  ArmorDefinition(id = "armor.studded-leather", name = "Studded leather armor", armor = StuddedLeatherArmor, baseAc = 12, dexLimit = 99, bonuses = [], source = BuiltInContent);
+}
+
+export function chainShirtDefinition() {
+  ArmorDefinition(id = "armor.chain-shirt", name = "Chain shirt", armor = ChainShirt, baseAc = 13, dexLimit = 2, bonuses = [], source = BuiltInContent);
+}
+
+export function scaleMailDefinition() {
+  ArmorDefinition(id = "armor.scale-mail", name = "Scale mail", armor = ScaleMail, baseAc = 14, dexLimit = 2, bonuses = [], source = BuiltInContent);
+}
+
+export function chainMailDefinition() {
+  ArmorDefinition(id = "armor.chain-mail", name = "Chain mail", armor = ChainMail, baseAc = 16, dexLimit = 0, bonuses = [], source = BuiltInContent);
+}
+
+export function thievesToolsDefinition() {
+  ToolDefinition(id = "tool.thieves-tools", name = "Thieves' tools", tool = ThievesTools, source = BuiltInContent);
+}
+
+export function herbalismKitDefinition() {
+  ToolDefinition(id = "tool.herbalism-kit", name = "Herbalism kit", tool = HerbalismKit, source = BuiltInContent);
+}
+
+export function disguiseKitDefinition() {
+  ToolDefinition(id = "tool.disguise-kit", name = "Disguise kit", tool = DisguiseKit, source = BuiltInContent);
+}
+
+export function playingCardsDefinition() {
+  ToolDefinition(id = "tool.playing-cards", name = "Playing cards", tool = PlayingCards, source = BuiltInContent);
+}
+
+export function explorerPackDefinition() {
+  GearDefinition(id = "gear.explorer-pack", name = "Explorer's pack", gear = ExplorerPack, source = BuiltInContent);
+}
+
+export function scholarPackDefinition() {
+  GearDefinition(id = "gear.scholar-pack", name = "Scholar's pack", gear = ScholarPack, source = BuiltInContent);
+}
+
+export function holySymbolDefinition() {
+  GearDefinition(id = "gear.holy-symbol", name = "Holy symbol", gear = HolySymbol, source = BuiltInContent);
+}
+
+export function spellbookDefinition() {
+  GearDefinition(id = "gear.spellbook", name = "Spellbook", gear = Spellbook, source = BuiltInContent);
+}
+
+export function ropeDefinition() {
+  GearDefinition(id = "gear.rope", name = "Rope", gear = Rope, source = BuiltInContent);
+}
+
+export function torchDefinition() {
+  GearDefinition(id = "gear.torch", name = "Torch", gear = Torch, source = BuiltInContent);
+}
+
+export function rubyRapierDefinition() {
+  MagicItemDefinition(
+    id = "item.ruby-rapier-darkness-plus-2",
+    name = "Ruby Rapier of Darkness +2",
+    description = "A DM-created magic rapier loaded at runtime in the future; compiled here only as a shape test.",
+    bonuses = [RuleBonus(target = InitiativeBonus, amount = 2, source = "Ruby Rapier of Darkness +2")],
+    source = HomebrewContent
+  );
+}
+
+export function speciesEntry(id, name, implemented, traitIds, description) {
+  let def = core2024Metadata(id, name, SpeciesContent, ["species", "2024-phb"], description);
+  speciesContentEntry(def, implemented, traitIds);
+}
+
+export function classEntry(id, name, implemented, hitDie, primaryAbilities, savingThrowNames, featureIds, description) {
+  let def = core2024Metadata(id, name, ClassContent, ["class", "2024-phb"], description);
+  classContentEntry(def, implemented, hitDie, primaryAbilities, savingThrowNames, featureIds);
+}
+
+export function backgroundEntry(id, name, implemented, abilityOptions, skillNames, toolIds, originFeatId, equipmentIds) {
+  let abilityText = join(abilityOptions, ", ");
+  let skillText = join(skillNames, ", ");
+  let text = "Ability options: " + abilityText + ". Origin feat: " + originFeatId + ". Skills: " + skillText + ".";
+  let def = core2024Metadata(id, name, BackgroundContent, ["background", "2024-phb"], text);
+  backgroundContentEntry(def, implemented, abilityOptions, skillNames, toolIds, originFeatId, equipmentIds);
+}
+
+export function originFeatEntry(id, name, implemented, grants) {
+  let def = core2024Metadata(id, name, FeatContent, ["feat", "origin", "2024-phb"], "2024 origin feat.");
+  featContentEntry(def, implemented, "origin", "", grants);
+}
+
+export function supportedSpeciesEntries() {
+  [
+    speciesEntry("species.human", "Human", true, ["trait.resourceful"], "Supported playable species."),
+    speciesEntry("species.elf", "Elf", true, ["trait.darkvision", "trait.keen-senses"], "Supported playable species."),
+    speciesEntry("species.dwarf", "Dwarf", true, ["trait.darkvision", "trait.dwarven-resilience"], "Supported playable species."),
+    speciesEntry("species.halfling", "Halfling", true, ["trait.lucky"], "Supported playable species.")
+  ];
+}
+
+export function pendingSpeciesEntries() {
+  [
+    speciesEntry("species.aasimar", "Aasimar", true, [], "Structured 2024 playable species entry with original summary text."),
+    speciesEntry("species.dragonborn", "Dragonborn", true, [], "Structured 2024 playable species entry with original summary text."),
+    speciesEntry("species.gnome", "Gnome", true, [], "Structured 2024 playable species entry with original summary text."),
+    speciesEntry("species.goliath", "Goliath", true, [], "Structured 2024 playable species entry with original summary text."),
+    speciesEntry("species.orc", "Orc", true, [], "Structured 2024 playable species entry with original summary text."),
+    speciesEntry("species.tiefling", "Tiefling", true, [], "Structured 2024 playable species entry with original summary text.")
+  ];
+}
+
+export function supportedClassEntries() {
+  [
+    classEntry("class.fighter", "Fighter", true, 10, ["Strength", "Dexterity", "Constitution"], ["Strength", "Constitution"], ["feature.fighting-style", "feature.second-wind"], "Supported playable class."),
+    classEntry("class.rogue", "Rogue", true, 8, ["Dexterity"], ["Dexterity", "Intelligence"], ["feature.expertise", "feature.sneak-attack"], "Supported playable class."),
+    classEntry("class.wizard", "Wizard", true, 6, ["Intelligence"], ["Intelligence", "Wisdom"], ["feature.spellcasting", "feature.arcane-recovery"], "Supported playable class."),
+    classEntry("class.cleric", "Cleric", true, 8, ["Wisdom"], ["Wisdom", "Charisma"], ["feature.spellcasting", "feature.channel-divinity"], "Supported playable class.")
+  ];
+}
+
+export function pendingClassEntries() {
+  [
+    classEntry("class.barbarian", "Barbarian", true, 12, ["Strength"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.bard", "Bard", true, 8, ["Charisma"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.druid", "Druid", true, 8, ["Wisdom"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.monk", "Monk", true, 8, ["Dexterity", "Wisdom"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.paladin", "Paladin", true, 10, ["Strength", "Charisma"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.ranger", "Ranger", true, 10, ["Dexterity", "Wisdom"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.sorcerer", "Sorcerer", true, 6, ["Charisma"], [], [], "Structured 2024 playable class entry with original summary text."),
+    classEntry("class.warlock", "Warlock", true, 8, ["Charisma"], [], [], "Structured 2024 playable class entry with original summary text.")
+  ];
+}
+
+export function supportedBackgroundEntries() {
+  [
+    backgroundEntry("background.acolyte", "Acolyte", true, ["Intelligence", "Wisdom", "Charisma"], ["Insight", "Religion"], [], "feat.magic-initiate", []),
+    backgroundEntry("background.criminal", "Criminal", true, ["Dexterity", "Constitution", "Intelligence"], ["Sleight of Hand", "Stealth"], ["tool.thieves-tools"], "feat.alert", []),
+    backgroundEntry("background.sage", "Sage", true, ["Constitution", "Intelligence", "Wisdom"], ["Arcana", "History"], [], "feat.magic-initiate", []),
+    backgroundEntry("background.soldier", "Soldier", true, ["Strength", "Dexterity", "Constitution"], ["Athletics", "Intimidation"], ["tool.playing-cards"], "feat.savage-attacker", [])
+  ];
+}
+
+export function pendingBackgroundEntries() {
+  [
+    backgroundEntry("background.artisan", "Artisan", true, ["Strength", "Dexterity", "Intelligence"], ["Investigation", "Persuasion"], ["tool.artisans-tools"], "feat.crafter", []),
+    backgroundEntry("background.charlatan", "Charlatan", true, ["Dexterity", "Constitution", "Charisma"], ["Deception", "Sleight of Hand"], ["tool.forgery-kit"], "feat.skilled", []),
+    backgroundEntry("background.entertainer", "Entertainer", true, ["Strength", "Dexterity", "Charisma"], ["Acrobatics", "Performance"], ["tool.musical-instrument"], "feat.musician", []),
+    backgroundEntry("background.farmer", "Farmer", true, ["Strength", "Constitution", "Wisdom"], ["Animal Handling", "Nature"], ["tool.carpenters-tools"], "feat.tough", []),
+    backgroundEntry("background.guard", "Guard", true, ["Strength", "Intelligence", "Wisdom"], ["Athletics", "Perception"], ["tool.gaming-set"], "feat.alert", []),
+    backgroundEntry("background.guide", "Guide", true, ["Dexterity", "Constitution", "Wisdom"], ["Stealth", "Survival"], ["tool.cartographers-tools"], "feat.magic-initiate-druid", []),
+    backgroundEntry("background.hermit", "Hermit", true, ["Constitution", "Wisdom", "Charisma"], ["Medicine", "Religion"], ["tool.herbalism-kit"], "feat.healer", []),
+    backgroundEntry("background.merchant", "Merchant", true, ["Constitution", "Intelligence", "Charisma"], ["Animal Handling", "Persuasion"], ["tool.navigators-tools"], "feat.lucky", []),
+    backgroundEntry("background.noble", "Noble", true, ["Strength", "Intelligence", "Charisma"], ["History", "Persuasion"], ["tool.gaming-set"], "feat.skilled", []),
+    backgroundEntry("background.sailor", "Sailor", true, ["Strength", "Dexterity", "Wisdom"], ["Acrobatics", "Perception"], ["tool.navigators-tools"], "feat.tavern-brawler", []),
+    backgroundEntry("background.scribe", "Scribe", true, ["Dexterity", "Intelligence", "Wisdom"], ["Investigation", "Perception"], ["tool.calligraphers-supplies"], "feat.skilled", []),
+    backgroundEntry("background.wayfarer", "Wayfarer", true, ["Dexterity", "Wisdom", "Charisma"], ["Insight", "Stealth"], ["tool.thieves-tools"], "feat.lucky", [])
+  ];
+}
+
+export function core2024FeatEntries() {
+  [
+    originFeatEntry("feat.alert", "Alert", true, ["initiative", "swap-initiative"]),
+    originFeatEntry("feat.crafter", "Crafter", true, []),
+    originFeatEntry("feat.healer", "Healer", true, []),
+    originFeatEntry("feat.lucky", "Lucky", true, []),
+    originFeatEntry("feat.magic-initiate", "Magic Initiate", true, ["spells"]),
+    originFeatEntry("feat.magic-initiate-druid", "Magic Initiate (Druid)", true, ["spells"]),
+    originFeatEntry("feat.musician", "Musician", true, []),
+    originFeatEntry("feat.savage-attacker", "Savage Attacker", true, ["weapon-damage"]),
+    originFeatEntry("feat.skilled", "Skilled", true, ["skills"]),
+    originFeatEntry("feat.tavern-brawler", "Tavern Brawler", true, []),
+    originFeatEntry("feat.tough", "Tough", true, ["hit-points"])
+  ];
+}
+
+export function supportedWeaponEntries() {
+  [
+    weaponContentEntry(weaponContent(clubDefinition()), true, "1d4", "Strength", []),
+    weaponContentEntry(weaponContent(daggerDefinition()), true, "1d4", "Dexterity", ["Finesse", "Light", "Thrown"]),
+    weaponContentEntry(weaponContent(quarterstaffDefinition()), true, "1d6", "Strength", ["Versatile"]),
+    weaponContentEntry(weaponContent(shortswordDefinition()), true, "1d6", "Dexterity", ["Finesse", "Light"]),
+    weaponContentEntry(weaponContent(longswordDefinition()), true, "1d8", "Strength", ["Versatile"]),
+    weaponContentEntry(weaponContent(shortbowDefinition()), true, "1d6", "Dexterity", ["Ammunition", "Two-Handed"]),
+    weaponContentEntry(weaponContent(longbowDefinition()), true, "1d8", "Dexterity", ["Ammunition", "Heavy", "Two-Handed"])
+  ];
+}
+
+export function supportedArmorEntries() {
+  [
+    armorContentEntry(armorContent(paddedArmorDefinition()), true, 11, 99, "light"),
+    armorContentEntry(armorContent(leatherArmorDefinition()), true, 11, 99, "light"),
+    armorContentEntry(armorContent(studdedLeatherArmorDefinition()), true, 12, 99, "light"),
+    armorContentEntry(armorContent(chainShirtDefinition()), true, 13, 2, "medium"),
+    armorContentEntry(armorContent(scaleMailDefinition()), true, 14, 2, "medium"),
+    armorContentEntry(armorContent(chainMailDefinition()), true, 16, 0, "heavy")
+  ];
+}
+
+export function supportedToolEntries() {
+  [
+    toolContentEntry(toolContent(thievesToolsDefinition()), true, "tools"),
+    toolContentEntry(toolContent(herbalismKitDefinition()), true, "tools"),
+    toolContentEntry(toolContent(disguiseKitDefinition()), true, "tools"),
+    toolContentEntry(toolContent(playingCardsDefinition()), true, "gaming-set")
+  ];
+}
+
+export function supportedGearEntries() {
+  [
+    gearContentEntry(gearContent(explorerPackDefinition()), true, "pack"),
+    gearContentEntry(gearContent(scholarPackDefinition()), true, "pack"),
+    gearContentEntry(gearContent(holySymbolDefinition()), true, "focus"),
+    gearContentEntry(gearContent(spellbookDefinition()), true, "book"),
+    gearContentEntry(gearContent(ropeDefinition()), true, "adventuring-gear"),
+    gearContentEntry(gearContent(torchDefinition()), true, "adventuring-gear")
+  ];
+}
+
+export function sampleHomebrewEntries() {
+  [magicItemContentEntry(magicItemContent(rubyRapierDefinition()), true, "rare", ["weapon-bonus", "darkness"] )];
+}
+
+export function core2024SpeciesEntries() {
+  supportedSpeciesEntries() + pendingSpeciesEntries();
+}
+
+export function core2024ClassEntries() {
+  supportedClassEntries() + pendingClassEntries();
+}
+
+export function core2024BackgroundEntries() {
+  supportedBackgroundEntries() + pendingBackgroundEntries();
+}
+
+export function emptyCatalog() {
+  ContentCatalog(
+    definitions = [],
+    speciesEntries = [],
+    classEntries = [],
+    backgroundEntries = [],
+    featEntries = [],
+    traitEntries = [],
+    weaponEntries = [],
+    armorEntries = [],
+    toolEntries = [],
+    gearEntries = [],
+    magicItemEntries = [],
+    spellEntries = [],
+    conditionEntries = [],
+    species = [],
+    classes = [],
+    backgrounds = [],
+    weapons = [],
+    armor = [],
+    tools = [],
+    gear = [],
+    magicItems = [],
+    feats = []
+  );
+}
+
+export function builtinCatalog() {
+  let supported = ContentCatalog(
+    definitions = [],
+    speciesEntries = core2024SpeciesEntries(),
+    classEntries = core2024ClassEntries(),
+    backgroundEntries = core2024BackgroundEntries(),
+    featEntries = core2024FeatEntries(),
+    traitEntries = [],
+    weaponEntries = supportedWeaponEntries(),
+    armorEntries = supportedArmorEntries(),
+    toolEntries = supportedToolEntries(),
+    gearEntries = supportedGearEntries(),
+    magicItemEntries = [],
+    spellEntries = [],
+    conditionEntries = [],
+    species = [aasimarDefinition(), dragonbornDefinition(), dwarfDefinition(), elfDefinition(), gnomeDefinition(), goliathDefinition(), halflingDefinition(), humanDefinition(), orcDefinition(), tieflingDefinition()],
+    classes = [barbarianDefinition(), bardDefinition(), clericDefinition(), druidDefinition(), fighterDefinition(), monkDefinition(), paladinDefinition(), rangerDefinition(), rogueDefinition(), sorcererDefinition(), warlockDefinition(), wizardDefinition()],
+    backgrounds = [acolyteDefinition(), artisanDefinition(), charlatanDefinition(), criminalDefinition(), entertainerDefinition(), farmerDefinition(), guardDefinition(), guideDefinition(), hermitDefinition(), merchantDefinition(), nobleDefinition(), sageDefinition(), sailorDefinition(), scribeDefinition(), soldierDefinition(), wayfarerDefinition()],
+    weapons = [clubDefinition(), daggerDefinition(), quarterstaffDefinition(), shortswordDefinition(), longswordDefinition(), shortbowDefinition(), longbowDefinition()],
+    armor = [paddedArmorDefinition(), leatherArmorDefinition(), studdedLeatherArmorDefinition(), chainShirtDefinition(), scaleMailDefinition(), chainMailDefinition()],
+    tools = [thievesToolsDefinition(), herbalismKitDefinition(), disguiseKitDefinition(), playingCardsDefinition()],
+    gear = [explorerPackDefinition(), scholarPackDefinition(), holySymbolDefinition(), spellbookDefinition(), ropeDefinition(), torchDefinition()],
+    magicItems = [],
+    feats = [alertFeatDefinition()]
+  );
+  catalogWithTypedDefinitions(supported);
+}
+
+export function sampleHomebrewCatalog() {
+  catalogWithDefinitions(ContentCatalog(
+    definitions = [],
+    speciesEntries = [],
+    classEntries = [],
+    backgroundEntries = [],
+    featEntries = [],
+    traitEntries = [],
+    weaponEntries = [],
+    armorEntries = [],
+    toolEntries = [],
+    gearEntries = [],
+    magicItemEntries = sampleHomebrewEntries(),
+    spellEntries = [],
+    conditionEntries = [],
+    species = [],
+    classes = [],
+    backgrounds = [],
+    weapons = [],
+    armor = [],
+    tools = [],
+    gear = [],
+    magicItems = [rubyRapierDefinition()],
+    feats = []
+  ));
+}
+
+export function mergeCatalogs(primary, extra) {
+  ContentCatalog(
+    definitions = primary.definitions + extra.definitions,
+    speciesEntries = primary.speciesEntries + extra.speciesEntries,
+    classEntries = primary.classEntries + extra.classEntries,
+    backgroundEntries = primary.backgroundEntries + extra.backgroundEntries,
+    featEntries = primary.featEntries + extra.featEntries,
+    traitEntries = primary.traitEntries + extra.traitEntries,
+    weaponEntries = primary.weaponEntries + extra.weaponEntries,
+    armorEntries = primary.armorEntries + extra.armorEntries,
+    toolEntries = primary.toolEntries + extra.toolEntries,
+    gearEntries = primary.gearEntries + extra.gearEntries,
+    magicItemEntries = primary.magicItemEntries + extra.magicItemEntries,
+    spellEntries = primary.spellEntries + extra.spellEntries,
+    conditionEntries = primary.conditionEntries + extra.conditionEntries,
+    species = primary.species + extra.species,
+    classes = primary.classes + extra.classes,
+    backgrounds = primary.backgrounds + extra.backgrounds,
+    weapons = primary.weapons + extra.weapons,
+    armor = primary.armor + extra.armor,
+    tools = primary.tools + extra.tools,
+    gear = primary.gear + extra.gear,
+    magicItems = primary.magicItems + extra.magicItems,
+    feats = primary.feats + extra.feats
+  );
+}
+
+export function demoCatalog() {
+  mergeCatalogs(builtinCatalog(), sampleHomebrewCatalog());
+}

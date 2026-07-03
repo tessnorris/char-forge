@@ -1,0 +1,13 @@
+// Character Forge domain: currency formatting
+
+export function formatCurrency(cpTotal) {
+  let gp = cpTotal / 100;
+  let sp = (cpTotal % 100) / 10;
+  let cp = cpTotal % 10;
+
+  let gpPart = (gp > 0 || (gp == 0 && sp == 0 && cp == 0)) ? [$"{gp} GP"] : [];
+  let spPart = sp > 0 ? [$"{sp} SP"] : [];
+  let cpPart = cp > 0 ? [$"{cp} CP"] : [];
+
+  join(gpPart + spPart + cpPart, ", ");
+}

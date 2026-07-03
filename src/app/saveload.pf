@@ -1,0 +1,276 @@
+// Character Forge save/load helpers
+//
+// This is a first pass at persistence. It deliberately saves only app/document
+// facts: identity, build choices, play state, and turn-resource state. It does
+// not save derived/projection data such as AC, proficiency bonus, actions, or
+// computed skill bonuses.
+//
+// The wire format is a compact text line for now. It is meant to prove the
+// architecture before committing to a final JSON codec.
+
+import * from "../character/abilities";
+import * from "../character/character";
+import * from "../content/catalogops";
+import * from "../character/resources";
+import * from "./appmodel";
+
+export type LoadResult = { document, status }
+
+function enc(s) {
+  let a = join(split(s, "%"), "%25");
+  let b = join(split(a, "|"), "%7C");
+  join(split(b, "\n"), "%0A");
+}
+
+function dec(s) {
+  let a = join(split(s, "%0A"), "\n");
+  let b = join(split(a, "%7C"), "|");
+  join(split(b, "%25"), "%");
+}
+
+function boolText(v) {
+  v ? "true" : "false";
+}
+
+function textBool(s) {
+  s == "true";
+}
+
+function safePart(parts, index, fallback) {
+  if length(parts) > index then
+    parts[index]
+  else
+    fallback;
+}
+
+function intPart(parts, index, fallback) {
+  let s = safePart(parts, index, __str__(fallback));
+  toInt(toFloat(s));
+}
+
+function nonEmpty(values) {
+  filter(fn s => s != "", values);
+}
+
+function idsText(ids) {
+  join(ids, ",");
+}
+
+function weaponIds(loadout) {
+  [weaponId(w) for w <- loadout.weapons];
+}
+
+function armorIds(loadout) {
+  [armorId(a) for a <- loadout.armor];
+}
+
+function toolIds(loadout) {
+  [toolId(t) for t <- loadout.tools];
+}
+
+function gearIds(loadout) {
+  [gearId(g) for g <- loadout.gear];
+}
+
+function conditionId(condition) {
+  match condition with
+  | Blinded -> "condition.blinded"
+  | Charmed -> "condition.charmed"
+  | Frightened -> "condition.frightened"
+  | Grappled -> "condition.grappled"
+  | Incapacitated -> "condition.incapacitated"
+  | Invisible -> "condition.invisible"
+  | Poisoned -> "condition.poisoned"
+  | Prone -> "condition.prone"
+  | Restrained -> "condition.restrained"
+  | Stunned -> "condition.stunned"
+  | Unconscious -> "condition.unconscious";
+}
+
+function conditionFromId(id) {
+  if id == "condition.blinded" then
+    Blinded
+  else if id == "condition.charmed" then
+    Charmed
+  else if id == "condition.frightened" then
+    Frightened
+  else if id == "condition.grappled" then
+    Grappled
+  else if id == "condition.incapacitated" then
+    Incapacitated
+  else if id == "condition.invisible" then
+    Invisible
+  else if id == "condition.poisoned" then
+    Poisoned
+  else if id == "condition.restrained" then
+    Restrained
+  else if id == "condition.stunned" then
+    Stunned
+  else if id == "condition.unconscious" then
+    Unconscious
+  else
+    Prone;
+}
+
+function conditionIds(state) {
+  [conditionId(c) for c <- state.conditions];
+}
+
+function weaponsFromText(catalog, s) {
+  [weaponFromId(catalog, id, Shortsword) for id <- nonEmpty(split(s, ","))];
+}
+
+function armorFromText(catalog, s) {
+  [armorFromId(catalog, id, LeatherArmor) for id <- nonEmpty(split(s, ","))];
+}
+
+function toolsFromText(catalog, s) {
+  [toolFromId(catalog, id, ThievesTools) for id <- nonEmpty(split(s, ","))];
+}
+
+function gearFromText(catalog, s) {
+  [gearFromId(catalog, id, ExplorerPack) for id <- nonEmpty(split(s, ","))];
+}
+
+function conditionsFromText(s) {
+  [conditionFromId(id) for id <- nonEmpty(split(s, ","))];
+}
+
+export function saveDocument(doc) {
+  let character = doc.character;
+  let build = character.build;
+  let state = character.state;
+  let scores = build.scores;
+  let loadout = build.loadout;
+  let turn = doc.turn;
+  join([
+    "CFDOC1",
+    enc(doc.id),
+    enc(build.identity.name),
+    enc(build.identity.playerName),
+    currentSpeciesId(build.species),
+    currentClassId(build.class),
+    currentBackgroundId(build.background),
+    __str__(build.level),
+    __str__(scores.strength),
+    __str__(scores.dexterity),
+    __str__(scores.constitution),
+    __str__(scores.intelligence),
+    __str__(scores.wisdom),
+    __str__(scores.charisma),
+    __str__(build.copper),
+    idsText(weaponIds(loadout)),
+    idsText(armorIds(loadout)),
+    idsText(toolIds(loadout)),
+    idsText(gearIds(loadout)),
+    boolText(loadout.hasShield),
+    __str__(state.currentHp),
+    __str__(state.temporaryHp),
+    __str__(state.hitDiceSpent),
+    idsText(conditionIds(state)),
+    enc(state.notes),
+    boolText(turn.sneakAttackUsed),
+    boolText(turn.secondWindUsed),
+    boolText(turn.actionSurgeUsed),
+    genderId(build.identity.gender),
+    dragonbornAncestryId(build.speciesOptions.dragonbornAncestry),
+    elfLineageId(build.speciesOptions.elfLineage),
+    skillId(build.speciesOptions.elfBonusSkill),
+    gnomeLineageId(build.speciesOptions.gnomeLineage),
+    goliathAncestryId(build.speciesOptions.goliathAncestry),
+    skillId(build.speciesOptions.humanBonusSkill),
+    build.speciesOptions.humanBonusFeat,
+    tieflingLineageId(build.speciesOptions.tieflingLineage),
+    build.speciesOptions.lineageSpellcastingAbility,
+    idsText([skillId(s) for s <- build.classOptions.classSkills]),
+    fightingStyleId(build.classOptions.fightingStyle),
+    clericOrderId(build.classOptions.clericOrder),
+    druidOrderId(build.classOptions.druidOrder),
+    skillId(build.classOptions.expertiseSkillOne),
+    skillId(build.classOptions.expertiseSkillTwo)
+  ], "|");
+}
+
+export function loadDocument(catalog, text, fallback) {
+  let parts = split(text, "|");
+  let tag = safePart(parts, 0, "");
+  if tag != "CFDOC1" then
+    LoadResult(document = fallback, status = "Import failed: unrecognized save text")
+  else {
+    let id = dec(safePart(parts, 1, fallback.id));
+    let name = dec(safePart(parts, 2, fallback.character.build.identity.name));
+    let playerName = dec(safePart(parts, 3, fallback.character.build.identity.playerName));
+    let gender = genderFromId(safePart(parts, 28, genderId(fallback.character.build.identity.gender)));
+    let species = speciesFromId(safePart(parts, 4, currentSpeciesId(fallback.character.build.species)), fallback.character.build.species);
+    let class = classFromId(safePart(parts, 5, currentClassId(fallback.character.build.class)), fallback.character.build.class);
+    let background = backgroundFromId(safePart(parts, 6, currentBackgroundId(fallback.character.build.background)), fallback.character.build.background);
+    let level = intPart(parts, 7, fallback.character.build.level);
+    let scores = AbilityScores(
+      strength = intPart(parts, 8, fallback.character.build.scores.strength),
+      dexterity = intPart(parts, 9, fallback.character.build.scores.dexterity),
+      constitution = intPart(parts, 10, fallback.character.build.scores.constitution),
+      intelligence = intPart(parts, 11, fallback.character.build.scores.intelligence),
+      wisdom = intPart(parts, 12, fallback.character.build.scores.wisdom),
+      charisma = intPart(parts, 13, fallback.character.build.scores.charisma)
+    );
+    let copper = intPart(parts, 14, fallback.character.build.copper);
+    let loadout = EquipmentLoadout(
+      weapons = weaponsFromText(catalog, safePart(parts, 15, "")),
+      armor = armorFromText(catalog, safePart(parts, 16, "")),
+      tools = toolsFromText(catalog, safePart(parts, 17, "")),
+      gear = gearFromText(catalog, safePart(parts, 18, "")),
+      hasShield = textBool(safePart(parts, 19, boolText(fallback.character.build.loadout.hasShield)))
+    );
+    let defaultOptions = defaultSpeciesOptions(species);
+    let speciesOptions = SpeciesOptions(
+      dragonbornAncestry = dragonbornAncestryFromId(safePart(parts, 29, dragonbornAncestryId(defaultOptions.dragonbornAncestry))),
+      elfLineage = elfLineageFromId(safePart(parts, 30, elfLineageId(defaultOptions.elfLineage))),
+      elfBonusSkill = skillFromId(safePart(parts, 31, skillId(defaultOptions.elfBonusSkill)), defaultOptions.elfBonusSkill),
+      gnomeLineage = gnomeLineageFromId(safePart(parts, 32, gnomeLineageId(defaultOptions.gnomeLineage))),
+      goliathAncestry = goliathAncestryFromId(safePart(parts, 33, goliathAncestryId(defaultOptions.goliathAncestry))),
+      humanBonusSkill = skillFromId(safePart(parts, 34, skillId(defaultOptions.humanBonusSkill)), defaultOptions.humanBonusSkill),
+      humanBonusFeat = safePart(parts, 35, defaultOptions.humanBonusFeat),
+      tieflingLineage = tieflingLineageFromId(safePart(parts, 36, tieflingLineageId(defaultOptions.tieflingLineage))),
+      lineageSpellcastingAbility = safePart(parts, 37, defaultOptions.lineageSpellcastingAbility)
+    );
+    let defaultClass = defaultClassOptions(class);
+    let classSkills = [skillFromId(id, Perception) for id <- nonEmpty(split(safePart(parts, 38, idsText([skillId(s) for s <- defaultClass.classSkills])), ","))];
+    let classOptions = ClassOptions(
+      classSkills = classSkills,
+      fightingStyle = fightingStyleFromId(safePart(parts, 39, fightingStyleId(defaultClass.fightingStyle))),
+      clericOrder = clericOrderFromId(safePart(parts, 40, clericOrderId(defaultClass.clericOrder))),
+      druidOrder = druidOrderFromId(safePart(parts, 41, druidOrderId(defaultClass.druidOrder))),
+      expertiseSkillOne = skillFromId(safePart(parts, 42, skillId(defaultClass.expertiseSkillOne)), defaultClass.expertiseSkillOne),
+      expertiseSkillTwo = skillFromId(safePart(parts, 43, skillId(defaultClass.expertiseSkillTwo)), defaultClass.expertiseSkillTwo)
+    );
+    let build = CharacterBuild(
+      identity = Identity(name = name, playerName = playerName, gender = gender),
+      species = species,
+      speciesOptions = speciesOptions,
+      class = class,
+      classOptions = classOptions,
+      background = background,
+      level = level,
+      scores = scores,
+      loadout = loadout,
+      copper = copper
+    );
+    let state = CharacterState(
+      currentHp = intPart(parts, 20, fallback.character.state.currentHp),
+      temporaryHp = intPart(parts, 21, fallback.character.state.temporaryHp),
+      hitDiceSpent = intPart(parts, 22, fallback.character.state.hitDiceSpent),
+      conditions = conditionsFromText(safePart(parts, 23, "")),
+      notes = dec(safePart(parts, 24, fallback.character.state.notes))
+    );
+    let character = Character(build = build, state = state);
+    let turn = TurnResourceState(
+      sneakAttackUsed = textBool(safePart(parts, 25, boolText(fallback.turn.sneakAttackUsed))),
+      secondWindUsed = textBool(safePart(parts, 26, boolText(fallback.turn.secondWindUsed))),
+      actionSurgeUsed = textBool(safePart(parts, 27, boolText(fallback.turn.actionSurgeUsed)))
+    );
+    LoadResult(
+      document = makeCharacterDocument(id, character, turn),
+      status = "Imported " + name
+    );
+  }
+}

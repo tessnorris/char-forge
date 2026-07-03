@@ -1,0 +1,189 @@
+// Character Forge play-state and resource projections
+//
+// These are computed from build + play-state facts. They are meant for
+// character sheets and combat views, not persistence. Persist the tiny state
+// facts like current HP, hit dice spent, and once-per-turn usage separately.
+
+import * from "./character";
+import * from "./rules";
+
+export type HealthStatus = {
+  | Healthy
+  | Bloodied
+  | Critical
+  | Down
+}
+
+export type ResourceKind = {
+  | SneakAttackResource
+  | SecondWindResource
+  | ActionSurgeResource
+  | HitDiceResource
+}
+
+export type Recovery = {
+  | RecoverEachTurn
+  | RecoverOnShortRest
+  | RecoverOnLongRest
+  | NoRecovery
+}
+
+export type TurnResourceState = { sneakAttackUsed, secondWindUsed, actionSurgeUsed }
+export type HealthView = { currentHp, temporaryHp, maxHp, effectiveHp, status, statusText, line }
+export type ResourceView = { kind, name, source, recovery, recoveryText, maxUses, used, remaining, available, line }
+
+export function sampleTurnResources() {
+  TurnResourceState(
+    sneakAttackUsed = false,
+    secondWindUsed = false,
+    actionSurgeUsed = false
+  );
+}
+
+export function recoveryName(recovery) {
+  match recovery with
+  | RecoverEachTurn -> "turn"
+  | RecoverOnShortRest -> "short rest"
+  | RecoverOnLongRest -> "long rest"
+  | NoRecovery -> "none";
+}
+
+export function conditionName(condition) {
+  match condition with
+  | Blinded -> "Blinded"
+  | Charmed -> "Charmed"
+  | Frightened -> "Frightened"
+  | Grappled -> "Grappled"
+  | Incapacitated -> "Incapacitated"
+  | Invisible -> "Invisible"
+  | Poisoned -> "Poisoned"
+  | Prone -> "Prone"
+  | Restrained -> "Restrained"
+  | Stunned -> "Stunned"
+  | Unconscious -> "Unconscious";
+}
+
+export function conditionNames(character) {
+  [ conditionName(c) for c <- character.state.conditions ];
+}
+
+export function hasFeature(feature, features) {
+  length(filter(fn f => f == feature, features)) > 0;
+}
+
+export function healthStatus(character) {
+  let current = character.state.currentHp;
+  let maxHp = hitPointMax(character);
+  if current <= 0 then
+    Down
+  else if current <= (maxHp / 4) then
+    Critical
+  else if current <= (maxHp / 2) then
+    Bloodied
+  else
+    Healthy;
+}
+
+export function healthStatusName(status) {
+  match status with
+  | Healthy -> "healthy"
+  | Bloodied -> "bloodied"
+  | Critical -> "critical"
+  | Down -> "down";
+}
+
+export function healthView(character) {
+  let current = character.state.currentHp;
+  let temp = character.state.temporaryHp;
+  let maxHp = hitPointMax(character);
+  let status = healthStatus(character);
+  let statusText = healthStatusName(status);
+  HealthView(
+    currentHp = current,
+    temporaryHp = temp,
+    maxHp = maxHp,
+    effectiveHp = current + temp,
+    status = status,
+    statusText = statusText,
+    line = $"{current}/{maxHp} HP + {temp} temp ({statusText})"
+  );
+}
+
+export function damagePreview(character, damage) {
+  let temp = character.state.temporaryHp;
+  let current = character.state.currentHp;
+  let tempAbsorbed = damage < temp ? damage : temp;
+  let remainingDamage = damage - tempAbsorbed;
+  let nextHp = maxInt(0, current - remainingDamage);
+  nextHp;
+}
+
+export function healingPreview(character, healing) {
+  let maxHp = hitPointMax(character);
+  let nextHp = character.state.currentHp + healing;
+  nextHp > maxHp ? maxHp : nextHp;
+}
+
+export function resourceView(kind, name, source, recovery, maxUses, used) {
+  let remaining = maxInt(0, maxUses - used);
+  let available = remaining > 0;
+  let recoveryText = recoveryName(recovery);
+  let availability = available ? "available" : "spent";
+  ResourceView(
+    kind = kind,
+    name = name,
+    source = source,
+    recovery = recovery,
+    recoveryText = recoveryText,
+    maxUses = maxUses,
+    used = used,
+    remaining = remaining,
+    available = available,
+    line = $"{name}: {remaining}/{maxUses} {availability}, recovers on {recoveryText}"
+  );
+}
+
+export function sneakAttackResource(character, rules, turn) {
+  let used = turn.sneakAttackUsed ? 1 : 0;
+  resourceView(SneakAttackResource, "Sneak Attack", "Rogue", RecoverEachTurn, 1, used);
+}
+
+export function secondWindResource(character, rules, turn) {
+  let used = turn.secondWindUsed ? 1 : 0;
+  resourceView(SecondWindResource, "Second Wind", "Fighter", RecoverOnShortRest, 1, used);
+}
+
+export function actionSurgeResource(character, rules, turn) {
+  let used = turn.actionSurgeUsed ? 1 : 0;
+  resourceView(ActionSurgeResource, "Action Surge", "Fighter", RecoverOnShortRest, 1, used);
+}
+
+export function hitDiceResource(character) {
+  let maxUses = character.build.level;
+  let used = character.state.hitDiceSpent;
+  resourceView(HitDiceResource, "Hit Dice", className(character.build.class), RecoverOnLongRest, maxUses, used);
+}
+
+export function characterResources(character, rules, turn) {
+  let featureList = rules.features;
+  let sneak = hasFeature("Sneak Attack", featureList) ? [sneakAttackResource(character, rules, turn)] : [];
+  let second = hasFeature("Second Wind", featureList) ? [secondWindResource(character, rules, turn)] : [];
+  let surge = hasFeature("Action Surge", featureList) ? [actionSurgeResource(character, rules, turn)] : [];
+  sneak + second + surge + [hitDiceResource(character)];
+}
+
+export function spendSneakAttack(turn) {
+  TurnResourceState(
+    sneakAttackUsed = true,
+    secondWindUsed = turn.secondWindUsed,
+    actionSurgeUsed = turn.actionSurgeUsed
+  );
+}
+
+export function resetTurnResources(turn) {
+  TurnResourceState(
+    sneakAttackUsed = false,
+    secondWindUsed = turn.secondWindUsed,
+    actionSurgeUsed = turn.actionSurgeUsed
+  );
+}

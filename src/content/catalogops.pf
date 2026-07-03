@@ -1,0 +1,342 @@
+// Character Forge catalog operations
+//
+// This module is the boundary between browser-friendly string IDs and the
+// strongly typed domain model. The web view gets stable content IDs from the
+// catalog, but only this module resolves those IDs back into domain values.
+
+import * from "../character/character";
+import * from "./content";
+
+export function contentChoiceLabel(definition, implemented) {
+  if implemented then
+    definition.name
+  else
+    definition.name + " (metadata only)";
+}
+
+export function speciesChoices(catalog) {
+  [choice(e.definition.id, contentChoiceLabel(e.definition, e.implemented)) for e <- catalog.speciesEntries];
+}
+
+export function classChoices(catalog) {
+  [choice(e.definition.id, contentChoiceLabel(e.definition, e.implemented)) for e <- catalog.classEntries];
+}
+
+export function backgroundChoices(catalog) {
+  [choice(e.definition.id, contentChoiceLabel(e.definition, e.implemented)) for e <- catalog.backgroundEntries];
+}
+
+
+export function weaponChoices(catalog) {
+  [choice(d.id, d.name) for d <- catalog.weapons];
+}
+
+export function armorChoices(catalog) {
+  [choice(d.id, d.name) for d <- catalog.armor];
+}
+
+export function toolChoices(catalog) {
+  [choice(d.id, d.name) for d <- catalog.tools];
+}
+
+export function gearChoices(catalog) {
+  [choice(d.id, d.name) for d <- catalog.gear];
+}
+
+export function weaponFromId(catalog, id, fallback) {
+  let matches = filter(fn d => d.id == id, catalog.weapons);
+  if length(matches) > 0 then {
+    let found = matches[0];
+    found.weapon;
+  } else {
+    fallback;
+  }
+}
+
+export function armorFromId(catalog, id, fallback) {
+  let matches = filter(fn d => d.id == id, catalog.armor);
+  if length(matches) > 0 then {
+    let found = matches[0];
+    found.armor;
+  } else {
+    fallback;
+  }
+}
+
+export function toolFromId(catalog, id, fallback) {
+  let matches = filter(fn d => d.id == id, catalog.tools);
+  if length(matches) > 0 then {
+    let found = matches[0];
+    found.tool;
+  } else {
+    fallback;
+  }
+}
+
+export function gearFromId(catalog, id, fallback) {
+  let matches = filter(fn d => d.id == id, catalog.gear);
+  if length(matches) > 0 then {
+    let found = matches[0];
+    found.gear;
+  } else {
+    fallback;
+  }
+}
+
+export function currentSpeciesId(species) {
+  if species == Aasimar then
+    "species.aasimar"
+  else if species == Dragonborn then
+    "species.dragonborn"
+  else if species == Dwarf then
+    "species.dwarf"
+  else if species == Elf then
+    "species.elf"
+  else if species == Gnome then
+    "species.gnome"
+  else if species == Goliath then
+    "species.goliath"
+  else if species == Halfling then
+    "species.halfling"
+  else if species == Human then
+    "species.human"
+  else if species == Orc then
+    "species.orc"
+  else if species == Tiefling then
+    "species.tiefling"
+  else
+    "species.human";
+}
+
+export function currentClassId(class) {
+  if class == Barbarian then
+    "class.barbarian"
+  else if class == Bard then
+    "class.bard"
+  else if class == Cleric then
+    "class.cleric"
+  else if class == Druid then
+    "class.druid"
+  else if class == Fighter then
+    "class.fighter"
+  else if class == Monk then
+    "class.monk"
+  else if class == Paladin then
+    "class.paladin"
+  else if class == Ranger then
+    "class.ranger"
+  else if class == Rogue then
+    "class.rogue"
+  else if class == Sorcerer then
+    "class.sorcerer"
+  else if class == Warlock then
+    "class.warlock"
+  else if class == Wizard then
+    "class.wizard"
+  else
+    "class.fighter";
+}
+
+export function currentBackgroundId(background) {
+  if background == Acolyte then
+    "background.acolyte"
+  else if background == Artisan then
+    "background.artisan"
+  else if background == Charlatan then
+    "background.charlatan"
+  else if background == Criminal then
+    "background.criminal"
+  else if background == Entertainer then
+    "background.entertainer"
+  else if background == Farmer then
+    "background.farmer"
+  else if background == Guard then
+    "background.guard"
+  else if background == Guide then
+    "background.guide"
+  else if background == Hermit then
+    "background.hermit"
+  else if background == Merchant then
+    "background.merchant"
+  else if background == Noble then
+    "background.noble"
+  else if background == Sage then
+    "background.sage"
+  else if background == Sailor then
+    "background.sailor"
+  else if background == Scribe then
+    "background.scribe"
+  else if background == Soldier then
+    "background.soldier"
+  else if background == Wayfarer then
+    "background.wayfarer"
+  else
+    "background.acolyte";
+}
+
+export function speciesFromId(id, fallback) {
+  if id == "species.aasimar" then
+    Aasimar
+  else if id == "species.dragonborn" then
+    Dragonborn
+  else if id == "species.dwarf" then
+    Dwarf
+  else if id == "species.elf" then
+    Elf
+  else if id == "species.gnome" then
+    Gnome
+  else if id == "species.goliath" then
+    Goliath
+  else if id == "species.halfling" then
+    Halfling
+  else if id == "species.human" then
+    Human
+  else if id == "species.orc" then
+    Orc
+  else if id == "species.tiefling" then
+    Tiefling
+  else
+    fallback;
+}
+
+export function classFromId(id, fallback) {
+  if id == "class.barbarian" then
+    Barbarian
+  else if id == "class.bard" then
+    Bard
+  else if id == "class.cleric" then
+    Cleric
+  else if id == "class.druid" then
+    Druid
+  else if id == "class.fighter" then
+    Fighter
+  else if id == "class.monk" then
+    Monk
+  else if id == "class.paladin" then
+    Paladin
+  else if id == "class.ranger" then
+    Ranger
+  else if id == "class.rogue" then
+    Rogue
+  else if id == "class.sorcerer" then
+    Sorcerer
+  else if id == "class.warlock" then
+    Warlock
+  else if id == "class.wizard" then
+    Wizard
+  else
+    fallback;
+}
+
+export function backgroundFromId(id, fallback) {
+  if id == "background.acolyte" then
+    Acolyte
+  else if id == "background.artisan" then
+    Artisan
+  else if id == "background.charlatan" then
+    Charlatan
+  else if id == "background.criminal" then
+    Criminal
+  else if id == "background.entertainer" then
+    Entertainer
+  else if id == "background.farmer" then
+    Farmer
+  else if id == "background.guard" then
+    Guard
+  else if id == "background.guide" then
+    Guide
+  else if id == "background.hermit" then
+    Hermit
+  else if id == "background.merchant" then
+    Merchant
+  else if id == "background.noble" then
+    Noble
+  else if id == "background.sage" then
+    Sage
+  else if id == "background.sailor" then
+    Sailor
+  else if id == "background.scribe" then
+    Scribe
+  else if id == "background.soldier" then
+    Soldier
+  else if id == "background.wayfarer" then
+    Wayfarer
+  else
+    fallback;
+}
+
+export function catalogStatus(catalog) {
+  let speciesCount = length(catalog.speciesEntries);
+  let classCount = length(catalog.classEntries);
+  let backgroundCount = length(catalog.backgroundEntries);
+  "Catalog loaded: " + __str__(speciesCount) + " species, " + __str__(classCount) + " classes, " + __str__(backgroundCount) + " backgrounds";
+}
+
+
+export function weaponId(weapon) {
+  if weapon == Club then
+    "weapon.club"
+  else if weapon == Dagger then
+    "weapon.dagger"
+  else if weapon == Quarterstaff then
+    "weapon.quarterstaff"
+  else if weapon == Shortsword then
+    "weapon.shortsword"
+  else if weapon == Longsword then
+    "weapon.longsword"
+  else if weapon == Shortbow then
+    "weapon.shortbow"
+  else if weapon == Longbow then
+    "weapon.longbow"
+  else
+    "weapon.shortsword";
+}
+
+export function armorId(armor) {
+  if armor == NoArmor then
+    "armor.none"
+  else if armor == PaddedArmor then
+    "armor.padded"
+  else if armor == LeatherArmor then
+    "armor.leather"
+  else if armor == StuddedLeatherArmor then
+    "armor.studded-leather"
+  else if armor == ChainShirt then
+    "armor.chain-shirt"
+  else if armor == ScaleMail then
+    "armor.scale-mail"
+  else if armor == ChainMail then
+    "armor.chain-mail"
+  else
+    "armor.leather";
+}
+
+export function toolId(tool) {
+  if tool == ThievesTools then
+    "tool.thieves-tools"
+  else if tool == HerbalismKit then
+    "tool.herbalism-kit"
+  else if tool == DisguiseKit then
+    "tool.disguise-kit"
+  else if tool == PlayingCards then
+    "tool.playing-cards"
+  else
+    "tool.thieves-tools";
+}
+
+export function gearId(gear) {
+  if gear == ExplorerPack then
+    "gear.explorer-pack"
+  else if gear == ScholarPack then
+    "gear.scholar-pack"
+  else if gear == HolySymbol then
+    "gear.holy-symbol"
+  else if gear == Spellbook then
+    "gear.spellbook"
+  else if gear == Rope then
+    "gear.rope"
+  else if gear == Torch then
+    "gear.torch"
+  else
+    "gear.explorer-pack";
+}

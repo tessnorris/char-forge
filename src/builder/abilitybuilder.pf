@@ -1,0 +1,218 @@
+// Character Forge ability-score builder helpers
+//
+// This module is editor/domain support for the structured ability-score page.
+// It keeps ability generation and point-buy math out of the TEA view/update code.
+
+import * from "$PFUN_HOME/lib/random.pf";
+import * from "../character/abilities";
+import * from "../character/character";
+
+export type AbilityRoll = { value, line }
+export type AbilityRollSet = { scores, lines }
+
+export function abilityFromId(id) {
+  if id == "str" || id == "strength" then
+    Strength
+  else if id == "dex" || id == "dexterity" then
+    Dexterity
+  else if id == "con" || id == "constitution" then
+    Constitution
+  else if id == "int" || id == "intelligence" then
+    Intelligence
+  else if id == "wis" || id == "wisdom" then
+    Wisdom
+  else
+    Charisma;
+}
+
+export function abilityId(ability) {
+  match ability with
+  | Strength -> "str"
+  | Dexterity -> "dex"
+  | Constitution -> "con"
+  | Intelligence -> "int"
+  | Wisdom -> "wis"
+  | Charisma -> "cha";
+}
+
+export function standardArrayValues() {
+  [15, 14, 13, 12, 10, 8];
+}
+
+export function standardArrayScores() {
+  AbilityScores(
+    strength = 15,
+    dexterity = 14,
+    constitution = 13,
+    intelligence = 12,
+    wisdom = 10,
+    charisma = 8
+  );
+}
+
+export function pointBuyBaseScores() {
+  AbilityScores(
+    strength = 8,
+    dexterity = 8,
+    constitution = 8,
+    intelligence = 8,
+    wisdom = 8,
+    charisma = 8
+  );
+}
+
+export function pointBuyCost(score) {
+  if score <= 8 then 0
+  else if score == 9 then 1
+  else if score == 10 then 2
+  else if score == 11 then 3
+  else if score == 12 then 4
+  else if score == 13 then 5
+  else if score == 14 then 7
+  else if score == 15 then 9
+  else 999;
+}
+
+export function pointBuyTotal(scores) {
+  pointBuyCost(scores.strength) +
+  pointBuyCost(scores.dexterity) +
+  pointBuyCost(scores.constitution) +
+  pointBuyCost(scores.intelligence) +
+  pointBuyCost(scores.wisdom) +
+  pointBuyCost(scores.charisma);
+}
+
+export function pointBuyRemaining(scores) {
+  27 - pointBuyTotal(scores);
+}
+
+export function pointBuyStatus(scores) {
+  let remaining = pointBuyRemaining(scores);
+  if remaining < 0 then
+    "over by " + __str__(0 - remaining)
+  else
+    __str__(remaining) + " remaining";
+}
+
+export function clampPointBuy(score) {
+  if score < 8 then 8
+  else if score > 15 then 15
+  else score;
+}
+
+export function rollModeName(mode) {
+  if mode == "3d6" then
+    "3d6"
+  else if mode == "4d6-reroll-ones" then
+    "4d6 drop lowest, reroll 1s"
+  else if mode == "4d6-reroll-one-two" then
+    "4d6 drop lowest, reroll 1s and 2s"
+  else if mode == "2d6-plus-6" then
+    "2d6 + 6"
+  else
+    "4d6 drop lowest";
+}
+
+proc rollD6() {
+  randomInt(1, 6);
+}
+
+proc rollD6AtLeast(minimum) {
+  var value = rollD6();
+  if value < minimum then
+    rollD6AtLeast(minimum)
+  else
+    value;
+}
+
+function min4(a, b, c, d) {
+  let m1 = a < b ? a : b;
+  let m2 = c < d ? c : d;
+  m1 < m2 ? m1 : m2;
+}
+
+proc roll3d6() {
+  var a = rollD6();
+  var b = rollD6();
+  var c = rollD6();
+  let total = a + b + c;
+  AbilityRoll(
+    value = total,
+    line = "3d6 rolls [" + __str__(a) + ", " + __str__(b) + ", " + __str__(c) + "] = " + __str__(total)
+  );
+}
+
+proc roll4d6DropLowest(minimum, label) {
+  var a = rollD6AtLeast(minimum);
+  var b = rollD6AtLeast(minimum);
+  var c = rollD6AtLeast(minimum);
+  var d = rollD6AtLeast(minimum);
+  let lowest = min4(a, b, c, d);
+  let total = a + b + c + d - lowest;
+  AbilityRoll(
+    value = total,
+    line = label + " rolls [" + __str__(a) + ", " + __str__(b) + ", " + __str__(c) + ", " + __str__(d) + "] = " + __str__(total)
+  );
+}
+
+proc roll2d6plus6() {
+  var first = rollD6();
+  var second = rollD6();
+  let value = first + second + 6;
+  AbilityRoll(
+    value = value,
+    line = "2d6+6 rolls [" + __str__(first) + ", " + __str__(second) + "] = " + __str__(value)
+  );
+}
+
+export proc rollAbilityWithMode(mode) {
+  if mode == "3d6" then
+    roll3d6()
+  else if mode == "4d6-reroll-ones" then
+    roll4d6DropLowest(2, "4d6r1")
+  else if mode == "4d6-reroll-one-two" then
+    roll4d6DropLowest(3, "4d6r1r2")
+  else if mode == "2d6-plus-6" then
+    roll2d6plus6()
+  else
+    roll4d6DropLowest(1, "4d6");
+}
+
+export proc rollAbilityScoresRandom(mode) {
+  var str = rollAbilityWithMode(mode);
+  var dex = rollAbilityWithMode(mode);
+  var con = rollAbilityWithMode(mode);
+  var int = rollAbilityWithMode(mode);
+  var wis = rollAbilityWithMode(mode);
+  var cha = rollAbilityWithMode(mode);
+  AbilityRollSet(
+    scores = AbilityScores(
+      strength = str.value,
+      dexterity = dex.value,
+      constitution = con.value,
+      intelligence = int.value,
+      wisdom = wis.value,
+      charisma = cha.value
+    ),
+    lines = [
+      "STR: " + str.line,
+      "DEX: " + dex.line,
+      "CON: " + con.line,
+      "INT: " + int.line,
+      "WIS: " + wis.line,
+      "CHA: " + cha.line
+    ]
+  );
+}
+
+export function backgroundAbilityChoices(background) {
+  match background with
+  | Acolyte -> [Intelligence, Wisdom, Charisma]
+  | Criminal -> [Dexterity, Constitution, Intelligence]
+  | Sage -> [Constitution, Intelligence, Wisdom]
+  | Soldier -> [Strength, Dexterity, Constitution];
+}
+
+export function backgroundAbilityLine(background) {
+  join([abilityShort(a) for a <- backgroundAbilityChoices(background)], ", ");
+}

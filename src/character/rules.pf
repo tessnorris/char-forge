@@ -1,0 +1,319 @@
+// Character Forge rule providers
+//
+// These functions convert durable choices into rule facts. The character model
+// stores the choices; this module derives the rules those choices grant.
+
+import * from "./abilities";
+import * from "./character";
+import * from "./feats";
+
+export function classSavingThrows(class) {
+  match class with
+  | Barbarian -> [Strength, Constitution]
+  | Bard -> [Dexterity, Charisma]
+  | Cleric -> [Wisdom, Charisma]
+  | Druid -> [Intelligence, Wisdom]
+  | Fighter -> [Strength, Constitution]
+  | Monk -> [Strength, Dexterity]
+  | Paladin -> [Wisdom, Charisma]
+  | Ranger -> [Strength, Dexterity]
+  | Rogue -> [Dexterity, Intelligence]
+  | Sorcerer -> [Constitution, Charisma]
+  | Warlock -> [Wisdom, Charisma]
+  | Wizard -> [Intelligence, Wisdom];
+}
+
+export function classSkillProficiencies(class) {
+  match class with
+  | Barbarian -> [Athletics]
+  | Bard -> [Performance]
+  | Cleric -> [Religion]
+  | Druid -> [Nature]
+  | Fighter -> [Athletics]
+  | Monk -> [Acrobatics]
+  | Paladin -> [Persuasion]
+  | Ranger -> [Survival]
+  | Rogue -> [Stealth, SleightOfHand]
+  | Sorcerer -> [Arcana]
+  | Warlock -> [Arcana]
+  | Wizard -> [Arcana];
+}
+
+export function backgroundSkillProficiencies(background) {
+  match background with
+  | Acolyte -> [Insight, Religion]
+  | Artisan -> [Investigation, Persuasion]
+  | Charlatan -> [Deception, SleightOfHand]
+  | Criminal -> [Stealth, SleightOfHand]
+  | Entertainer -> [Acrobatics, Performance]
+  | Farmer -> [AnimalHandling, Nature]
+  | Guard -> [Athletics, Perception]
+  | Guide -> [Stealth, Survival]
+  | Hermit -> [Medicine, Religion]
+  | Merchant -> [AnimalHandling, Persuasion]
+  | Noble -> [History, Persuasion]
+  | Sage -> [Arcana, History]
+  | Sailor -> [Acrobatics, Perception]
+  | Scribe -> [Investigation, Perception]
+  | Soldier -> [Athletics, Intimidation]
+  | Wayfarer -> [Insight, Stealth];
+}
+
+export function backgroundToolProficiencies(background) {
+  match background with
+  | Acolyte -> []
+  | Artisan -> []
+  | Charlatan -> [DisguiseKit]
+  | Criminal -> [ThievesTools]
+  | Entertainer -> []
+  | Farmer -> []
+  | Guard -> [PlayingCards]
+  | Guide -> []
+  | Hermit -> [HerbalismKit]
+  | Merchant -> []
+  | Noble -> [PlayingCards]
+  | Sage -> []
+  | Sailor -> []
+  | Scribe -> []
+  | Soldier -> [PlayingCards]
+  | Wayfarer -> [ThievesTools];
+}
+
+export function speciesSkillProficiencies(species) {
+  match species with
+  | Aasimar -> []
+  | Dragonborn -> []
+  | Dwarf -> []
+  | Elf -> [Perception]
+  | Gnome -> []
+  | Goliath -> []
+  | Halfling -> []
+  | Human -> []
+  | Orc -> []
+  | Tiefling -> [];
+}
+
+export function speciesToolProficiencies(species) {
+  match species with
+  | Aasimar -> []
+  | Dragonborn -> []
+  | Dwarf -> []
+  | Elf -> []
+  | Gnome -> []
+  | Goliath -> []
+  | Halfling -> []
+  | Human -> []
+  | Orc -> []
+  | Tiefling -> [];
+}
+
+export function speciesSkillProficienciesForBuild(build) {
+  let base = speciesSkillProficiencies(build.species);
+  if speciesName(build.species) == "Elf" then
+    base + [build.speciesOptions.elfBonusSkill]
+  else if speciesName(build.species) == "Human" then
+    base + [build.speciesOptions.humanBonusSkill]
+  else
+    base;
+}
+
+export function classSkillProficienciesForBuild(build) {
+  build.classOptions.classSkills;
+}
+
+export function classArmorProficiencies(class) {
+  match class with
+  | Barbarian -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail]
+  | Bard -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor]
+  | Cleric -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail]
+  | Druid -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor]
+  | Fighter -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail, ChainMail]
+  | Monk -> []
+  | Paladin -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail, ChainMail]
+  | Ranger -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor, ChainShirt, ScaleMail]
+  | Rogue -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor]
+  | Sorcerer -> []
+  | Warlock -> [PaddedArmor, LeatherArmor, StuddedLeatherArmor]
+  | Wizard -> [];
+}
+
+export function classWeaponProficiencies(class) {
+  match class with
+  | Barbarian -> [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow]
+  | Bard -> [Club, Dagger, Quarterstaff, Shortsword, Shortbow]
+  | Cleric -> [Club, Dagger, Quarterstaff]
+  | Druid -> [Club, Dagger, Quarterstaff, Shortbow]
+  | Fighter -> [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow]
+  | Monk -> [Club, Dagger, Quarterstaff, Shortsword, Shortbow]
+  | Paladin -> [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow]
+  | Ranger -> [Club, Dagger, Quarterstaff, Shortsword, Longsword, Shortbow, Longbow]
+  | Rogue -> [Club, Dagger, Quarterstaff, Shortsword, Shortbow]
+  | Sorcerer -> [Dagger, Quarterstaff]
+  | Warlock -> [Dagger, Quarterstaff]
+  | Wizard -> [Dagger, Quarterstaff];
+}
+
+export function backgroundTraits(background) {
+  match background with
+  | Acolyte -> []
+  | Artisan -> []
+  | Charlatan -> []
+  | Criminal -> []
+  | Entertainer -> []
+  | Farmer -> []
+  | Guard -> []
+  | Guide -> []
+  | Hermit -> []
+  | Merchant -> []
+  | Noble -> []
+  | Sage -> []
+  | Sailor -> []
+  | Scribe -> []
+  | Soldier -> []
+  | Wayfarer -> [];
+}
+
+export function backgroundFeats(background) {
+  match background with
+  | Acolyte -> ["Magic Initiate"]
+  | Artisan -> ["Crafter"]
+  | Charlatan -> ["Skilled"]
+  | Criminal -> ["Alert"]
+  | Entertainer -> ["Musician"]
+  | Farmer -> ["Tough"]
+  | Guard -> ["Alert"]
+  | Guide -> ["Magic Initiate"]
+  | Hermit -> ["Healer"]
+  | Merchant -> ["Lucky"]
+  | Noble -> ["Skilled"]
+  | Sage -> ["Magic Initiate"]
+  | Sailor -> ["Tavern Brawler"]
+  | Scribe -> ["Skilled"]
+  | Soldier -> ["Savage Attacker"]
+  | Wayfarer -> ["Lucky"];
+}
+
+export function backgroundFeatures(background) {
+  backgroundTraits(background) + backgroundFeats(background);
+}
+
+export function speciesTraits(species) {
+  match species with
+  | Aasimar -> ["Celestial Resistance", "Healing Hands", "Light Bearer"]
+  | Dragonborn -> ["Draconic Ancestry", "Breath Weapon", "Damage Resistance"]
+  | Dwarf -> ["Darkvision", "Dwarven Resilience", "Dwarven Toughness"]
+  | Elf -> ["Darkvision", "Keen Senses", "Fey Ancestry", "Trance"]
+  | Gnome -> ["Darkvision", "Gnomish Cunning"]
+  | Goliath -> ["Giant Ancestry", "Powerful Build"]
+  | Halfling -> ["Lucky", "Brave", "Nimble"]
+  | Human -> ["Resourceful", "Skillful", "Versatile"]
+  | Orc -> ["Adrenaline Rush", "Powerful Build"]
+  | Tiefling -> ["Darkvision", "Fiendish Legacy", "Otherworldly Presence"];
+}
+
+export function classFeatureTraits(class, level) {
+  match class with
+  | Barbarian -> ["Rage", "Unarmored Defense", "Weapon Mastery"]
+  | Bard -> ["Bardic Inspiration", "Spellcasting", "Expertise"]
+  | Cleric -> ["Spellcasting", "Divine Order", "Channel Divinity"]
+  | Druid -> ["Spellcasting", "Druidic", "Wild Shape"]
+  | Fighter -> level >= 2 ? ["Fighting Style", "Second Wind", "Action Surge"] : ["Fighting Style", "Second Wind"]
+  | Monk -> ["Martial Arts", "Unarmored Defense", "Focus"]
+  | Paladin -> ["Lay on Hands", "Spellcasting", "Divine Smite"]
+  | Ranger -> ["Spellcasting", "Favored Enemy", "Weapon Mastery"]
+  | Rogue -> level >= 2 ? ["Expertise", "Sneak Attack", "Thieves' Cant", "Cunning Action"] : ["Expertise", "Sneak Attack", "Thieves' Cant"]
+  | Sorcerer -> ["Spellcasting", "Innate Sorcery"]
+  | Warlock -> ["Pact Magic", "Eldritch Invocations"]
+  | Wizard -> ["Spellcasting", "Arcane Recovery"];
+}
+
+export function speciesFeatures(species) {
+  speciesTraits(species);
+}
+
+export function classFeatures(class, level) {
+  classFeatureTraits(class, level);
+}
+
+export function speciesBonuses(species) {
+  match species with
+  | Aasimar -> []
+  | Dragonborn -> []
+  | Dwarf -> [RuleBonus(target = CarryingCapacityBonus, amount = 30, source = "Dwarven build")]
+  | Elf -> [RuleBonus(target = PassivePerceptionBonus, amount = 1, source = "Keen Senses")]
+  | Gnome -> []
+  | Goliath -> [RuleBonus(target = CarryingCapacityBonus, amount = 30, source = "Powerful Build")]
+  | Halfling -> [RuleBonus(target = InitiativeBonus, amount = 1, source = "Halfling nimbleness")]
+  | Human -> [RuleBonus(target = CarryingCapacityBonus, amount = 15, source = "Human resourcefulness")]
+  | Orc -> [RuleBonus(target = CarryingCapacityBonus, amount = 30, source = "Powerful Build")]
+  | Tiefling -> [];
+}
+
+export function expertiseBonuses(options) {
+  [
+    RuleBonus(target = skillBonusTarget(options.expertiseSkillOne), amount = 2, source = "Expertise"),
+    RuleBonus(target = skillBonusTarget(options.expertiseSkillTwo), amount = 2, source = "Expertise")
+  ];
+}
+
+export function classOptionBonuses(build) {
+  let defense = build.classOptions.fightingStyle == DefenseStyle ? [RuleBonus(target = ArmorClassBonus, amount = 1, source = "Defensive fighting style")] : [];
+  let expertise = hasExpertiseOption(build.class) ? expertiseBonuses(build.classOptions) : [];
+  defense + expertise;
+}
+
+export function classBonuses(class, level) {
+  match class with
+  | Barbarian -> []
+  | Bard -> []
+  | Cleric -> []
+  | Druid -> []
+  | Fighter -> []
+  | Monk -> []
+  | Paladin -> []
+  | Ranger -> []
+  | Rogue -> []
+  | Sorcerer -> []
+  | Warlock -> []
+  | Wizard -> [];
+}
+
+export function backgroundBonuses(background) {
+  match background with
+  | Acolyte -> [RuleBonus(target = ReligionBonus, amount = 1, source = "Acolyte training")]
+  | Artisan -> [RuleBonus(target = InvestigationBonus, amount = 1, source = "Artisan practice")]
+  | Charlatan -> [RuleBonus(target = DeceptionBonus, amount = 1, source = "Charlatan practice")]
+  | Criminal -> []
+  | Entertainer -> [RuleBonus(target = PerformanceBonus, amount = 1, source = "Entertainer practice")]
+  | Farmer -> [RuleBonus(target = AnimalHandlingBonus, amount = 1, source = "Farmer practice")]
+  | Guard -> [RuleBonus(target = PerceptionBonus, amount = 1, source = "Guard practice")]
+  | Guide -> [RuleBonus(target = SurvivalBonus, amount = 1, source = "Guide practice")]
+  | Hermit -> [RuleBonus(target = MedicineBonus, amount = 1, source = "Hermit practice")]
+  | Merchant -> [RuleBonus(target = PersuasionBonus, amount = 1, source = "Merchant practice")]
+  | Noble -> [RuleBonus(target = HistoryBonus, amount = 1, source = "Noble education")]
+  | Sage -> [RuleBonus(target = HistoryBonus, amount = 1, source = "Research habit")]
+  | Sailor -> [RuleBonus(target = AcrobaticsBonus, amount = 1, source = "Sailor practice")]
+  | Scribe -> [RuleBonus(target = InvestigationBonus, amount = 1, source = "Scribe practice")]
+  | Soldier -> [RuleBonus(target = AthleticsBonus, amount = 1, source = "Military drills")]
+  | Wayfarer -> [RuleBonus(target = StealthBonus, amount = 1, source = "Wayfarer practice")];
+}
+
+export function rulesForBuild(build) {
+  CharacterRules(
+    savingThrows = classSavingThrows(build.class),
+    skillProficiencies = speciesSkillProficienciesForBuild(build) + classSkillProficienciesForBuild(build) + backgroundSkillProficiencies(build.background),
+    toolProficiencies = speciesToolProficiencies(build.species) + backgroundToolProficiencies(build.background),
+    armorProficiencies = classArmorProficiencies(build.class),
+    weaponProficiencies = classWeaponProficiencies(build.class),
+    speciesTraits = speciesTraits(build.species),
+    classFeatures = classFeatureTraits(build.class, build.level),
+    backgroundTraits = backgroundTraits(build.background),
+    feats = backgroundFeats(build.background),
+    features = speciesTraits(build.species) + classFeatureTraits(build.class, build.level) + backgroundTraits(build.background) + backgroundFeats(build.background),
+    bonuses = speciesBonuses(build.species) + classBonuses(build.class, build.level) + classOptionBonuses(build) + backgroundBonuses(build.background)
+  );
+}
+
+export function rulesForCharacter(character) {
+  rulesForBuild(character.build);
+}

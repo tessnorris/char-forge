@@ -1,0 +1,75 @@
+// Character Forge traits and feature display
+//
+// Traits are projected from species, class, background, feats, and eventually
+// magic items/content packs. They are not stored on the character.
+
+export type TraitKind = {
+  | SpeciesTrait
+  | ClassFeatureTrait
+  | BackgroundTrait
+  | FeatTrait
+  | MagicItemTrait
+}
+
+export type TraitView = { name, source, kind, kindName, description, line }
+
+export function traitKindName(kind) {
+  match kind with
+  | SpeciesTrait -> "Species Trait"
+  | ClassFeatureTrait -> "Class Feature"
+  | BackgroundTrait -> "Background"
+  | FeatTrait -> "Feat"
+  | MagicItemTrait -> "Magic Item";
+}
+
+export function traitDescription(name) {
+  if name == "Darkvision" then
+    "See in darkness within your species' listed range."
+  else if name == "Keen Senses" then
+    "Heightened senses improve awareness."
+  else if name == "Expertise" then
+    "Improve selected skill proficiencies."
+  else if name == "Sneak Attack" then
+    "Deal extra damage once per turn when the attack qualifies."
+  else if name == "Thieves' Cant" then
+    "Communicate with coded signs and underworld slang."
+  else if name == "Cunning Action" then
+    "Dash, Disengage, or Hide as a bonus action."
+  else if name == "Alert" then
+    "Origin feat: add your proficiency bonus to Initiative and swap Initiative with a willing ally."
+  else
+    "Granted by character content.";
+}
+
+export function traitView(name, source, kind) {
+  let kindName = traitKindName(kind);
+  let description = traitDescription(name);
+  TraitView(
+    name = name,
+    source = source,
+    kind = kind,
+    kindName = kindName,
+    description = description,
+    line = name + " (" + kindName + ", " + source + "): " + description
+  );
+}
+
+export function speciesTraitViews(source, names) {
+  [traitView(n, source, SpeciesTrait) for n <- names];
+}
+
+export function classTraitViews(source, names) {
+  [traitView(n, source, ClassFeatureTrait) for n <- names];
+}
+
+export function backgroundTraitViews(source, names) {
+  [traitView(n, source, BackgroundTrait) for n <- names];
+}
+
+export function featTraitViews(names) {
+  [traitView(n, "Feat", FeatTrait) for n <- names];
+}
+
+export function traitLines(traits) {
+  [t.line for t <- traits];
+}

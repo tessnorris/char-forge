@@ -1,0 +1,161 @@
+// Character Forge domain: deterministic dice helpers
+
+export type Rng = { seed }
+export type DieRoll = { rng, value }
+export type DiceNotation = { count, sides, modifier }
+export type ParseDiceResult = {
+  | ParsedDice: notation
+  | InvalidDice: message
+}
+export type RollResult = { rng, notation, rolls, total }
+export type GeneratedScoreRoll = { rng, sum, rolls, kept }
+export type D20AdvantageResult = { rng, rolls, kept, mode }
+
+export function nextSeed(seed) {
+  // Tiny deterministic generator. Not crypto, not fair enough for a casino,
+  // but excellent for repeatable compiler/interpreter demos.
+  (seed * 1103515245 + 12345) % 2147483648;
+}
+
+export function nextInt(rng, sides) {
+  let seed2 = nextSeed(rng.seed);
+  DieRoll(rng = Rng { seed2 }, value = (seed2 % sides) + 1);
+}
+
+export function rollD20(rng) {
+  nextInt(rng, 20);
+}
+
+export function rollDieOfSize(rng, sides) {
+  nextInt(rng, sides);
+}
+
+export function rollD6(rng) {
+  nextInt(rng, 6);
+}
+
+export function rollDieRerolling(rng, rerollThreshold, attempts) {
+  let rolled = rollD6(rng);
+  if rolled.value <= rerollThreshold && attempts < 50 then
+    rollDieRerolling(rolled.rng, rerollThreshold, attempts + 1)
+  else
+    rolled;
+}
+
+export function insertDesc(x, xs) {
+  if length(xs) == 0 then [x]
+  else if x >= head(xs) then cons(x, xs)
+  else cons(head(xs), insertDesc(x, tail(xs)));
+}
+
+export function sortDesc(xs) {
+  reduce(fn acc, x => insertDesc(x, acc), [], xs);
+}
+
+export function sumList(xs) {
+  reduce(fn acc, x => acc + x, 0, xs);
+}
+
+export function generateAbilityScoreLoop(rng, remaining, rerollThreshold, rolls) {
+  if remaining <= 0 then {
+    let sorted = sortDesc(rolls);
+    let kept = take(3, sorted);
+    GeneratedScoreRoll(rng = rng, sum = sumList(kept), rolls = rolls, kept = kept);
+  } else {
+    let rolled = rollDieRerolling(rng, rerollThreshold, 0);
+    generateAbilityScoreLoop(rolled.rng, remaining - 1, rerollThreshold, rolls + [rolled.value]);
+  }
+}
+
+export function generateAbilityScore(rng, numDice, rerollThreshold) {
+  generateAbilityScoreLoop(rng, numDice, rerollThreshold, []);
+}
+
+export function parseIntDigits(chars, acc) {
+  if length(chars) == 0 then acc
+  else {
+    let c = head(chars);
+    let digit = asc(c) - asc('0');
+    parseIntDigits(tail(chars), (acc * 10) + digit);
+  }
+}
+
+export function allDigits(s) {
+  length(s) > 0 && length(filter(fn c => asc(c) < asc('0') || asc(c) > asc('9'), s)) == 0;
+}
+
+export function parseUnsignedInt(s) {
+  allDigits(s) ? Some { parseIntDigits(s, 0) } : None;
+}
+
+export function stripSpaces(s) {
+  filter(fn c => c != ' ' && c != '\t', s);
+}
+
+export function parseModifier(s) {
+  if length(s) == 0 then Some { 0 }
+  else {
+    let sign = head(s);
+    let digits = tail(s);
+    if sign == '+' && allDigits(digits) then Some { parseIntDigits(digits, 0) }
+    else if sign == '-' && allDigits(digits) then Some { 0 - parseIntDigits(digits, 0) }
+    else None;
+  }
+}
+
+export function parseDiceNotation(input) {
+  let compact = stripSpaces(input);
+  match find(compact, 'd') with
+  | None -> InvalidDice { "expected dice notation like d20, 2d6, or 4d6+2" }
+  | Some pos -> {
+      let dIndex = pos.value;
+      let countText = slice(0, dIndex, compact);
+      let afterD = slice(dIndex + 1, length(compact) - dIndex - 1, compact);
+      let plusPos = find(afterD, '+');
+      let minusPos = find(afterD, '-');
+      let modIndex = match plusPos with
+        | Some p -> p.value
+        | None -> { match minusPos with | Some m -> m.value | None -> -1 };
+      let sidesText = modIndex < 0 ? afterD : slice(0, modIndex, afterD);
+      let modText = modIndex < 0 ? "" : slice(modIndex, length(afterD) - modIndex, afterD);
+      let countOption = length(countText) == 0 ? Some { 1 } : parseUnsignedInt(countText);
+      let sidesOption = parseUnsignedInt(sidesText);
+      let modifierOption = parseModifier(modText);
+      match countOption with
+      | None -> InvalidDice { "invalid die count" }
+      | Some count -> {
+          match sidesOption with
+          | None -> InvalidDice { "invalid die size" }
+          | Some sides -> {
+              match modifierOption with
+              | None -> InvalidDice { "invalid modifier" }
+              | Some modifier -> {
+                  if count.value < 1 || sides.value < 2 then
+                    InvalidDice { "count must be at least 1 and sides at least 2" }
+                  else
+                    ParsedDice { DiceNotation(count = count.value, sides = sides.value, modifier = modifier.value) }
+                }
+            }
+        }
+    }
+}
+
+export function rollNotationLoop(rng, notation, remaining, rolls) {
+  if remaining <= 0 then
+    RollResult(rng = rng, notation = notation, rolls = rolls, total = sumList(rolls) + notation.modifier)
+  else {
+    let rolled = rollDieOfSize(rng, notation.sides);
+    rollNotationLoop(rolled.rng, notation, remaining - 1, rolls + [rolled.value]);
+  }
+}
+
+export function rollNotation(rng, notation) {
+  rollNotationLoop(rng, notation, notation.count, []);
+}
+
+export function rollD20WithAdvantage(rng, mode) {
+  let first = rollD20(rng);
+  let second = rollD20(first.rng);
+  let kept = mode == "advantage" ? (first.value > second.value ? first.value : second.value) : (first.value < second.value ? first.value : second.value);
+  D20AdvantageResult(rng = second.rng, rolls = [first.value, second.value], kept = kept, mode = mode);
+}

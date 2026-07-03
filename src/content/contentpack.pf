@@ -1,0 +1,120 @@
+// Character Forge content pack metadata
+//
+// A content pack is a named catalog contribution. Built-in packs can be
+// compiled Pfun records for now, while imported/homebrew packs can later be
+// loaded from JSON into the same shape.
+
+import * from "./content";
+
+export type ContentPackSource = {
+  | BuiltInPack
+  | HomebrewPack
+  | ImportedPack
+}
+
+export type ContentPack = { id, name, version, source, enabled, description, catalog }
+
+export function contentPackSourceName(source) {
+  match source with
+  | BuiltInPack -> "built-in"
+  | HomebrewPack -> "homebrew"
+  | ImportedPack -> "imported";
+}
+
+export function makeContentPack(id, name, version, source, enabled, description, catalog) {
+  ContentPack(
+    id = id,
+    name = name,
+    version = version,
+    source = source,
+    enabled = enabled,
+    description = description,
+    catalog = catalog
+  );
+}
+
+export function core2024Pack() {
+  makeContentPack(
+    "pack.dnd-2024-core",
+    "D&D 2024 Core",
+    "0.3",
+    BuiltInPack,
+    true,
+    "Expanded 2024 core starter pack: supported playable slice plus structured metadata for core species, classes, backgrounds, and origin feats.",
+    builtinCatalog()
+  );
+}
+
+export function sampleHomebrewPack() {
+  makeContentPack(
+    "pack.sample-homebrew",
+    "Sample Homebrew",
+    "0.1",
+    HomebrewPack,
+    true,
+    "A tiny homebrew pack with Ruby Rapier of Darkness +2 as a catalog shape test.",
+    sampleHomebrewCatalog()
+  );
+}
+
+export function defaultContentPacks() {
+  [core2024Pack(), sampleHomebrewPack()];
+}
+
+export function catalogFromPacks(packs) {
+  reduce(
+    fn catalog, pack => {
+      if pack.enabled then
+        mergeCatalogs(catalog, pack.catalog)
+      else
+        catalog;
+    },
+    emptyCatalog(),
+    packs
+  );
+}
+
+export function togglePackEnabled(pack) {
+  ContentPack(
+    id = pack.id,
+    name = pack.name,
+    version = pack.version,
+    source = pack.source,
+    enabled = pack.enabled ? false : true,
+    description = pack.description,
+    catalog = pack.catalog
+  );
+}
+
+export function toggleContentPack(packs, id) {
+  map(
+    fn p => {
+      if p.id == id then
+        togglePackEnabled(p)
+      else
+        p;
+    },
+    packs
+  );
+}
+
+export function enabledContentPacks(packs) {
+  filter(fn p => p.enabled, packs);
+}
+
+export function contentPackStatus(pack) {
+  if pack.enabled then "enabled" else "disabled";
+}
+
+export function contentPackSummary(pack) {
+  let source = contentPackSourceName(pack.source);
+  pack.name + " " + pack.version + " (" + source + ", " + contentPackStatus(pack) + ")";
+}
+
+export function activeContentPackLine(packs) {
+  let active = enabledContentPacks(packs);
+  if length(active) == 0 then
+    "No content packs enabled"
+  else
+    join([p.name for p <- active], ", ");
+}

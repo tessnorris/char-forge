@@ -1,0 +1,93 @@
+// Character Forge feats
+//
+// Feats are content/rule facts, not ad hoc feature strings. Backgrounds in
+// 2024-style content grant an origin feat, so Criminal grants Alert here.
+
+export type FeatKind = {
+  | OriginFeat
+  | GeneralFeat
+  | FightingStyleFeat
+  | EpicBoonFeat
+}
+
+export type FeatDefinition = { id, name, kind, summary, features, bonuses }
+export type FeatView = { id, name, kind, kindName, summary, line }
+
+export function featKindName(kind) {
+  match kind with
+  | OriginFeat -> "Origin Feat"
+  | GeneralFeat -> "General Feat"
+  | FightingStyleFeat -> "Fighting Style Feat"
+  | EpicBoonFeat -> "Epic Boon";
+}
+
+export function featDefinition(id, name, kind, summary, features, bonuses) {
+  FeatDefinition(
+    id = id,
+    name = name,
+    kind = kind,
+    summary = summary,
+    features = features,
+    bonuses = bonuses
+  );
+}
+
+export function alertFeatDefinition() {
+  featDefinition(
+    "feat.alert",
+    "Alert",
+    OriginFeat,
+    "Add your proficiency bonus to Initiative and swap Initiative with a willing ally.",
+    ["Alert"],
+    []
+  );
+}
+
+export function featDefinitionForName(name) {
+  if name == "Alert" then
+    alertFeatDefinition()
+  else if name == "Crafter" then
+    featDefinition("feat.crafter", "Crafter", OriginFeat, "Improve practical crafting and shopping-related utility.", ["Crafter"], [])
+  else if name == "Healer" then
+    featDefinition("feat.healer", "Healer", OriginFeat, "Improve mundane healing and healer's kit use.", ["Healer"], [])
+  else if name == "Lucky" then
+    featDefinition("feat.lucky", "Lucky", OriginFeat, "Spend luck to influence an important d20 test.", ["Lucky"], [])
+  else if name == "Magic Initiate" then
+    featDefinition("feat.magic-initiate", "Magic Initiate", OriginFeat, "Learn a small amount of spellcasting from a chosen tradition.", ["Magic Initiate"], [])
+  else if name == "Musician" then
+    featDefinition("feat.musician", "Musician", OriginFeat, "Use music to bolster allies after a rest.", ["Musician"], [])
+  else if name == "Savage Attacker" then
+    featDefinition("feat.savage-attacker", "Savage Attacker", OriginFeat, "Improve one weapon damage roll on your turn.", ["Savage Attacker"], [])
+  else if name == "Skilled" then
+    featDefinition("feat.skilled", "Skilled", OriginFeat, "Gain additional proficiencies.", ["Skilled"], [])
+  else if name == "Tavern Brawler" then
+    featDefinition("feat.tavern-brawler", "Tavern Brawler", OriginFeat, "Improve unarmed and improvised fighting options.", ["Tavern Brawler"], [])
+  else if name == "Tough" then
+    featDefinition("feat.tough", "Tough", OriginFeat, "Increase maximum hit points as you level.", ["Tough"], [])
+  else
+    featDefinition("feat.unknown", name, GeneralFeat, "Content pack feat.", [name], []);
+}
+
+export function featView(def) {
+  let kindName = featKindName(def.kind);
+  FeatView(
+    id = def.id,
+    name = def.name,
+    kind = def.kind,
+    kindName = kindName,
+    summary = def.summary,
+    line = def.name + " (" + kindName + "): " + def.summary
+  );
+}
+
+export function featViewForName(name) {
+  featView(featDefinitionForName(name));
+}
+
+export function featViews(names) {
+  [featViewForName(n) for n <- names];
+}
+
+export function featLines(names) {
+  [v.line for v <- featViews(names)];
+}

@@ -1,0 +1,76 @@
+// Character Forge document/list operations
+//
+// These are pure application-level operations for the character sidebar.
+// They do not calculate character rules; they only manage character documents.
+
+import * from "../character/character";
+import * from "../character/resources";
+import * from "./appmodel";
+import * from "../character/buildops";
+
+export function initialDocuments() {
+  [makeCharacterDocument("char-tessa", sampleCharacter(), sampleTurnResources())];
+}
+
+export function firstDocument(docs) {
+  if length(docs) == 0 then
+    makeCharacterDocument("char-tessa", sampleCharacter(), sampleTurnResources())
+  else
+    head(docs);
+}
+
+export function findDocument(docs, id) {
+  if length(docs) == 0 then
+    makeCharacterDocument(id, sampleCharacter(), sampleTurnResources())
+  else {
+    let doc = head(docs);
+    if doc.id == id then
+      doc
+    else
+      findDocument(tail(docs), id);
+  }
+}
+
+export function replaceDocument(docs, updated) {
+  [doc.id == updated.id ? updated : doc for doc <- docs];
+}
+
+export function addDocument(docs, doc) {
+  docs + [doc];
+}
+
+export function deleteDocument(docs, id) {
+  filter(fn doc => doc.id != id, docs);
+}
+
+export function nextCharacterId(docs) {
+  "char-" + __str__(length(docs) + 1);
+}
+
+export function blankCharacter(id) {
+  let named = setName(sampleCharacter(), "New Character");
+  let character = setLevel(named, 1);
+  makeCharacterDocument(id, character, sampleTurnResources());
+}
+
+export function newCharacterDocument(docs) {
+  blankCharacter(nextCharacterId(docs));
+}
+
+export function duplicateDocument(doc, id) {
+  let originalName = doc.character.build.identity.name;
+  let copy = setName(doc.character, originalName + " Copy");
+  makeCharacterDocument(id, copy, doc.turn);
+}
+
+export function duplicateSelectedDocument(docs, selectedId) {
+  let selected = findDocument(docs, selectedId);
+  duplicateDocument(selected, nextCharacterId(docs));
+}
+
+export function ensureNonEmpty(docs) {
+  if length(docs) == 0 then
+    initialDocuments()
+  else
+    docs;
+}

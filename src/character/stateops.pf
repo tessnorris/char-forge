@@ -1,0 +1,136 @@
+// Character Forge pure gameplay state operations
+//
+// These functions are the future TEA update helpers. They take immutable
+// character/play facts and return updated values. No derived stats are stored;
+// every limit is computed from the character build when the operation runs.
+
+import * from "./character";
+import * from "./resources";
+import * from "../engine/dice";
+import * from "./abilities";
+
+export type OperationResult = { character, line }
+export type HitDieResult = { rng, character, roll, healed, line }
+
+export function clampInt(low, high, value) {
+  if value < low then
+    low
+  else if value > high then
+    high
+  else
+    value;
+}
+
+export function withState(character, state) {
+  Character(
+    build = character.build,
+    state = state
+  );
+}
+
+export function replaceState(character, currentHp, temporaryHp, hitDiceSpent, conditions, notes) {
+  withState(
+    character,
+    CharacterState(
+      currentHp = currentHp,
+      temporaryHp = temporaryHp,
+      hitDiceSpent = hitDiceSpent,
+      conditions = conditions,
+      notes = notes
+    )
+  );
+}
+
+export function clampHp(character, hp) {
+  clampInt(0, hitPointMax(character), hp);
+}
+
+export function takeDamage(character, amount) {
+  let state = character.state;
+  let damage = maxInt(0, amount);
+  let tempAbsorbed = minInt(state.temporaryHp, damage);
+  let remainingDamage = damage - tempAbsorbed;
+  let nextTemp = state.temporaryHp - tempAbsorbed;
+  let nextHp = clampHp(character, state.currentHp - remainingDamage);
+  let next = replaceState(character, nextHp, nextTemp, state.hitDiceSpent, state.conditions, state.notes);
+  OperationResult(character = next, line = $"take {damage} damage -> {nextHp} HP, {nextTemp} temp HP");
+}
+
+export function heal(character, amount) {
+  let state = character.state;
+  let healing = maxInt(0, amount);
+  let nextHp = clampHp(character, state.currentHp + healing);
+  let healed = nextHp - state.currentHp;
+  let next = replaceState(character, nextHp, state.temporaryHp, state.hitDiceSpent, state.conditions, state.notes);
+  OperationResult(character = next, line = $"heal {healing} -> +{healed} HP, now {nextHp} HP");
+}
+
+export function gainTemporaryHp(character, amount) {
+  let state = character.state;
+  let temp = maxInt(0, amount);
+  let nextTemp = maxInt(state.temporaryHp, temp);
+  let next = replaceState(character, state.currentHp, nextTemp, state.hitDiceSpent, state.conditions, state.notes);
+  OperationResult(character = next, line = $"gain {temp} temp HP -> {nextTemp} temp HP");
+}
+
+export function addCondition(character, condition) {
+  let state = character.state;
+  let existing = hasCondition(condition, state.conditions);
+  let nextConditions = existing ? state.conditions : state.conditions + [condition];
+  let next = replaceState(character, state.currentHp, state.temporaryHp, state.hitDiceSpent, nextConditions, state.notes);
+  let name = conditionName(condition);
+  let line = existing ? $"condition already present: {name}" : $"add condition: {name}";
+  OperationResult(character = next, line = line);
+}
+
+export function removeCondition(character, condition) {
+  let state = character.state;
+  let nextConditions = filter(fn c => c != condition, state.conditions);
+  let next = replaceState(character, state.currentHp, state.temporaryHp, state.hitDiceSpent, nextConditions, state.notes);
+  let name = conditionName(condition);
+  OperationResult(character = next, line = $"remove condition: {name}");
+}
+
+export function setNotes(character, notes) {
+  let state = character.state;
+  let next = replaceState(character, state.currentHp, state.temporaryHp, state.hitDiceSpent, state.conditions, notes);
+  OperationResult(character = next, line = "update notes");
+}
+
+export function spendHitDie(rng, character) {
+  let remaining = hitDiceRemaining(character);
+  if remaining <= 0 then
+    HitDieResult(rng = rng, character = character, roll = 0, healed = 0, line = "no hit dice remaining")
+  else {
+    let dieSize = hitDie(character.build.class);
+    let rolled = rollDieOfSize(rng, dieSize);
+    let con = abilityMod(getScore(character.build.scores, Constitution));
+    let healing = maxInt(1, rolled.value + con);
+    let healed = heal(character, healing);
+    let healedCharacter = healed.character;
+    let healedState = healedCharacter.state;
+    let spent = character.state.hitDiceSpent + 1;
+    let next = replaceState(healedCharacter, healedState.currentHp, healedState.temporaryHp, spent, healedState.conditions, healedState.notes);
+    HitDieResult(rng = rolled.rng, character = next, roll = rolled.value, healed = healedState.currentHp - character.state.currentHp, line = $"spend hit die d{dieSize}: rolled {rolled.value}, healed {healing}");
+  }
+}
+
+export function shortRest(character) {
+  let state = character.state;
+  let next = replaceState(character, state.currentHp, 0, state.hitDiceSpent, state.conditions, state.notes);
+  OperationResult(character = next, line = "short rest -> temp HP cleared");
+}
+
+export function longRest(character) {
+  let maxHp = hitPointMax(character);
+  let next = replaceState(character, maxHp, 0, 0, [], character.state.notes);
+  OperationResult(character = next, line = $"long rest -> {maxHp} HP, hit dice restored, conditions cleared");
+}
+
+export function startTurn(turn) {
+  resetTurnResources(turn);
+}
+
+export function useSneakAttack(turn) {
+  spendSneakAttack(turn);
+}

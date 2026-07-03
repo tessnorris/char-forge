@@ -1,0 +1,852 @@
+// Character Forge web app pass 2
+//
+// Run from ~/src/pf/character-forge with:
+//   pfun --serve ./src/app.pf
+//
+// This pass keeps browser values at the edge. Select boxes carry stable
+// catalog IDs, catalogops resolves them, and the domain stays strongly typed.
+
+import * from "io";
+import * from "$PFUN_HOME/lib/htmllib";
+import * from "$PFUN_HOME/lib/viewlib";
+import * from "$PFUN_HOME/lib/tea";
+import * from "./character/abilities";
+import * from "./character/character";
+import * from "./character/rules";
+import * from "./content/content";
+import * from "./content/contentpack";
+import * from "./content/catalogops";
+import * from "./character/buildops";
+import * from "./character/stateops";
+import * from "./character/context";
+import * from "./character/resources";
+import * from "./character/actions";
+import * from "./app/appmodel";
+import * from "./app/documentops";
+import * from "./app/saveload";
+import * from "./builder/abilitybuilder";
+import * from "./builder/namegenerator";
+
+// ── TEA plumbing ──────────────────────────────────────────────────────────────
+
+function noCmd(model) {
+  UpdateResult { model, cmdNone() };
+}
+
+function defaultSelection() {
+  BuilderSelection(
+    activeTab = "builder",
+    builderStep = IdentityStep,
+    equipmentCategory = "weapons",
+    equipmentSearch = "",
+    expandedSections = ["identity", "abilities", "equipment"],
+    abilityMethod = "manual",
+    standardSelectedScore = "",
+    standardStrength = "",
+    standardDexterity = "",
+    standardConstitution = "",
+    standardIntelligence = "",
+    standardWisdom = "",
+    standardCharisma = "",
+    backgroundBonusMode = "plus-two-plus-one",
+    backgroundBonusPrimary = "dex",
+    backgroundBonusSecondary = "con",
+    backgroundBonusTertiary = "int",
+    rollMode = "4d6-drop-lowest",
+    rollSeed = "",
+    rollSummary = "No rolls yet"
+  );
+}
+
+function init() {
+  let packs = defaultContentPacks();
+  let catalog = catalogFromPacks(packs);
+  let documents = initialDocuments();
+  let selected = firstDocument(documents);
+  let model = Model(
+    catalog = catalog,
+    contentPacks = packs,
+    documents = documents,
+    selectedId = selected.id,
+    character = selected.character,
+    turn = selected.turn,
+    status = catalogStatus(catalog),
+    damageText = "7",
+    healingText = "6",
+    tempText = "5",
+    saveText = "",
+    importText = "",
+    selection = defaultSelection()
+  );
+  noCmd(model);
+}
+
+type Msg = {
+  | NewCharacter
+  | SelectCharacter : value
+  | DuplicateSelected
+  | DeleteSelected
+  | SetName : value
+  | SetGender : value
+  | SuggestName
+  | SelectSpecies : value
+  | SetDragonbornAncestry : value
+  | SetElfLineage : value
+  | SetElfBonusSkill : value
+  | SetGnomeLineage : value
+  | SetGoliathAncestry : value
+  | SetHumanBonusSkill : value
+  | SetHumanBonusFeat : value
+  | SetTieflingLineage : value
+  | SetLineageSpellcastingAbility : value
+  | SelectClass : value
+  | SetClassSkill : value
+  | SetFightingStyle : value
+  | SetClericOrder : value
+  | SetDruidOrder : value
+  | SetExpertiseSkillOne : value
+  | SetExpertiseSkillTwo : value
+  | SelectBackground : value
+  | SetLevel : value
+  | SetStrength : value
+  | SetDexterity : value
+  | SetConstitution : value
+  | SetIntelligence : value
+  | SetWisdom : value
+  | SetCharisma : value
+  | IncreaseStrength
+  | DecreaseStrength
+  | IncreaseDexterity
+  | DecreaseDexterity
+  | IncreaseConstitution
+  | DecreaseConstitution
+  | IncreaseIntelligence
+  | DecreaseIntelligence
+  | IncreaseWisdom
+  | DecreaseWisdom
+  | IncreaseCharisma
+  | DecreaseCharisma
+  | ToggleShield : value
+  | SetDamageText : value
+  | SetHealingText : value
+  | SetTempText : value
+  | SetSaveText : value
+  | SetImportText : value
+  | ExportSelected
+  | ExportDownloaded
+  | ImportCharacterFile : value
+  | ImportDocument
+  | SetNotesText : value
+  | SetActiveTab : value
+  | SetBuilderStep : value
+  | SetEquipmentCategory : value
+  | SetEquipmentSearch : value
+  | SetAbilityMethod : value
+  | SelectStandardScore : value
+  | AssignStandardStrength
+  | AssignStandardDexterity
+  | AssignStandardConstitution
+  | AssignStandardIntelligence
+  | AssignStandardWisdom
+  | AssignStandardCharisma
+  | SetBackgroundBonusMode : value
+  | SetBackgroundBonusPrimary : value
+  | SetBackgroundBonusSecondary : value
+  | SetBackgroundBonusTertiary : value
+  | ApplyBackgroundBonuses
+  | ApplyStandardArray
+  | ResetPointBuy
+  | SetRollMode : value
+  | SetRollSeed : value
+  | RollAbilityScores
+  | AddWeaponById : value
+  | AddArmorById : value
+  | AddToolById : value
+  | AddGearById : value
+  | RemoveWeaponById : value
+  | ClearArmorMsg
+  | RemoveToolById : value
+  | RemoveGearById : value
+  | ApplyDamage
+  | ApplyHealing
+  | ApplyTempHp
+  | UseSneakAttack
+  | StartTurn
+  | ShortRestMsg
+  | LongRestMsg
+  | AddProne
+  | RemoveProne
+  | AddConditionById : value
+  | RemoveConditionById : value
+  | ToggleContentPack : value
+  | ResetSample
+}
+
+function syncedDocuments(model, character, turn) {
+  replaceDocument(model.documents, makeCharacterDocument(model.selectedId, character, turn));
+}
+
+function buildModel(model, documents, selectedId, character, turn, status, damageText, healingText, tempText, saveText, importText, selection) {
+  noCmd(Model(
+    catalog = model.catalog,
+    contentPacks = model.contentPacks,
+    documents = documents,
+    selectedId = selectedId,
+    character = character,
+    turn = turn,
+    status = status,
+    damageText = damageText,
+    healingText = healingText,
+    tempText = tempText,
+    saveText = saveText,
+    importText = importText,
+    selection = selection
+  ));
+}
+
+function withModel(model, character, turn, status, damageText, healingText, tempText, saveText, importText, selection) {
+  let documents = syncedDocuments(model, character, turn);
+  buildModel(model, documents, model.selectedId, character, turn, status, damageText, healingText, tempText, saveText, importText, selection);
+}
+
+function withCharacter(model, character, status) {
+  withModel(model, character, model.turn, status, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+}
+
+function withTurn(model, turn, status) {
+  withModel(model, model.character, turn, status, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+}
+
+function withInputs(model, damageText, healingText, tempText, status) {
+  withModel(model, model.character, model.turn, status, damageText, healingText, tempText, model.saveText, model.importText, model.selection);
+}
+
+function withSelection(model, selection, status) {
+  withModel(model, model.character, model.turn, status, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+}
+
+
+function withSaveText(model, saveText, status) {
+  withModel(model, model.character, model.turn, status, model.damageText, model.healingText, model.tempText, saveText, model.importText, model.selection);
+}
+
+function withImportText(model, importText, status) {
+  withModel(model, model.character, model.turn, status, model.damageText, model.healingText, model.tempText, model.saveText, importText, model.selection);
+}
+
+function selectedDocument(model) {
+  makeCharacterDocument(model.selectedId, model.character, model.turn);
+}
+
+function setSelectionTab(selection, value) {
+  makeSelection(selection, value, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBuilderStep(selection, value) {
+  makeSelection(selection, selection.activeTab, value, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionEquipmentCategory(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, value, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function makeSelection(selection, activeTab, builderStep, equipmentCategory, equipmentSearch, expandedSections, abilityMethod, standardSelectedScore, standardStrength, standardDexterity, standardConstitution, standardIntelligence, standardWisdom, standardCharisma, backgroundBonusMode, backgroundBonusPrimary, backgroundBonusSecondary, backgroundBonusTertiary, rollMode, rollSeed, rollSummary) {
+  BuilderSelection(
+    activeTab = activeTab,
+    builderStep = builderStep,
+    equipmentCategory = equipmentCategory,
+    equipmentSearch = equipmentSearch,
+    expandedSections = expandedSections,
+    abilityMethod = abilityMethod,
+    standardSelectedScore = standardSelectedScore,
+    standardStrength = standardStrength,
+    standardDexterity = standardDexterity,
+    standardConstitution = standardConstitution,
+    standardIntelligence = standardIntelligence,
+    standardWisdom = standardWisdom,
+    standardCharisma = standardCharisma,
+    backgroundBonusMode = backgroundBonusMode,
+    backgroundBonusPrimary = backgroundBonusPrimary,
+    backgroundBonusSecondary = backgroundBonusSecondary,
+    backgroundBonusTertiary = backgroundBonusTertiary,
+    rollMode = rollMode,
+    rollSeed = rollSeed,
+    rollSummary = rollSummary
+  );
+}
+
+function setSelectionEquipmentSearch(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, value, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionAbilityMethod(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, value, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+
+function setSelectionStandardSelectedScore(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, value, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionStandardAssignment(selection, ability, value) {
+  let str = ability == Strength ? value : selection.standardStrength;
+  let dex = ability == Dexterity ? value : selection.standardDexterity;
+  let con = ability == Constitution ? value : selection.standardConstitution;
+  let intv = ability == Intelligence ? value : selection.standardIntelligence;
+  let wis = ability == Wisdom ? value : selection.standardWisdom;
+  let cha = ability == Charisma ? value : selection.standardCharisma;
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", str, dex, con, intv, wis, cha, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function selectedStandardScoreInt(selection) {
+  intFromText(selection.standardSelectedScore);
+}
+
+function assignSelectedStandardScore(character, ability, selection) {
+  if selection.standardSelectedScore == "" then
+    character
+  else
+    setScoreWithBackgroundBonuses(character, ability, selectedStandardScoreInt(selection), selection);
+}
+
+function setSelectionBackgroundBonusMode(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, value, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBackgroundBonusPrimary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, value, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBackgroundBonusSecondary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, value, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionBackgroundBonusTertiary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, value, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionRollMode(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, value, selection.rollSeed, selection.rollSummary);
+}
+
+function setSelectionRollSeed(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, value, selection.rollSummary);
+}
+
+function setSelectionRollSummary(selection, value) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, selection.standardSelectedScore, selection.standardStrength, selection.standardDexterity, selection.standardConstitution, selection.standardIntelligence, selection.standardWisdom, selection.standardCharisma, selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, value);
+}
+
+
+function standardArrayDefaultSelection(selection) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", "15", "14", "13", "12", "10", "8", selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function clearStandardArraySelection(selection) {
+  makeSelection(selection, selection.activeTab, selection.builderStep, selection.equipmentCategory, selection.equipmentSearch, selection.expandedSections, selection.abilityMethod, "", "", "", "", "", "", "", selection.backgroundBonusMode, selection.backgroundBonusPrimary, selection.backgroundBonusSecondary, selection.backgroundBonusTertiary, selection.rollMode, selection.rollSeed, selection.rollSummary);
+}
+
+function applyScoresToCharacter(character, scores) {
+  let c1 = setAbilityScore(character, Strength, scores.strength);
+  let c2 = setAbilityScore(c1, Dexterity, scores.dexterity);
+  let c3 = setAbilityScore(c2, Constitution, scores.constitution);
+  let c4 = setAbilityScore(c3, Intelligence, scores.intelligence);
+  let c5 = setAbilityScore(c4, Wisdom, scores.wisdom);
+  setAbilityScore(c5, Charisma, scores.charisma);
+}
+
+function addAbilityBonus(character, ability, amount) {
+  let current = getScore(character.build.scores, ability);
+  setAbilityScore(character, ability, current + amount);
+}
+
+function applySelectedBackgroundBonuses(character, selection) {
+  let primary = abilityFromId(selection.backgroundBonusPrimary);
+  let secondary = abilityFromId(selection.backgroundBonusSecondary);
+  let tertiary = abilityFromId(selection.backgroundBonusTertiary);
+  if selection.backgroundBonusMode == "plus-one-plus-one-plus-one" then {
+    let c1 = addAbilityBonus(character, primary, 1);
+    let c2 = addAbilityBonus(c1, secondary, 1);
+    addAbilityBonus(c2, tertiary, 1);
+  } else {
+    let c1 = addAbilityBonus(character, primary, 2);
+    addAbilityBonus(c1, secondary, 1);
+  }
+}
+
+function removeSelectedBackgroundBonuses(character, selection) {
+  let primary = abilityFromId(selection.backgroundBonusPrimary);
+  let secondary = abilityFromId(selection.backgroundBonusSecondary);
+  let tertiary = abilityFromId(selection.backgroundBonusTertiary);
+  if selection.backgroundBonusMode == "plus-one-plus-one-plus-one" then {
+    let c1 = addAbilityBonus(character, primary, -1);
+    let c2 = addAbilityBonus(c1, secondary, -1);
+    addAbilityBonus(c2, tertiary, -1);
+  } else {
+    let c1 = addAbilityBonus(character, primary, -2);
+    addAbilityBonus(c1, secondary, -1);
+  }
+}
+
+function transitionBackgroundBonuses(character, oldSelection, newSelection) {
+  applySelectedBackgroundBonuses(removeSelectedBackgroundBonuses(character, oldSelection), newSelection);
+}
+
+function applyScoresWithBackgroundBonuses(character, scores, selection) {
+  applySelectedBackgroundBonuses(applyScoresToCharacter(character, scores), selection);
+}
+
+function setScoreWithBackgroundBonuses(character, ability, score, selection) {
+  let base = removeSelectedBackgroundBonuses(character, selection);
+  let changed = setAbilityScore(base, ability, score);
+  applySelectedBackgroundBonuses(changed, selection);
+}
+
+function adjustPointBuyScore(character, ability, delta, selection) {
+  let base = removeSelectedBackgroundBonuses(character, selection);
+  let current = getScore(base.build.scores, ability);
+  let nextScore = clampPointBuy(current + delta);
+  applySelectedBackgroundBonuses(setAbilityScore(base, ability, nextScore), selection);
+}
+
+
+function withContentPacks(model, packs, status) {
+  let catalog = catalogFromPacks(packs);
+  noCmd(Model(
+    catalog = catalog,
+    contentPacks = packs,
+    documents = model.documents,
+    selectedId = model.selectedId,
+    character = model.character,
+    turn = model.turn,
+    status = status,
+    damageText = model.damageText,
+    healingText = model.healingText,
+    tempText = model.tempText,
+    saveText = model.saveText,
+    importText = model.importText,
+    selection = model.selection
+  ));
+}
+
+function fieldText(payload) {
+  payload.value;
+}
+
+function fieldInt(payload) {
+  toInt(toFloat(payload.value));
+}
+
+function intFromText(text) {
+  toInt(toFloat(text));
+}
+
+
+function builderStepFromText(value) {
+  if value == "identity" then
+    IdentityStep
+  else if value == "species-options" then
+    SpeciesOptionsStep
+  else if value == "class-options" then
+    ClassOptionsStep
+  else if value == "abilities" then
+    AbilitiesStep
+  else if value == "equipment" then
+    EquipmentStep
+  else
+    ReviewStep;
+}
+
+proc update(msg, model) {
+  let character = model.character;
+  let build = character.build;
+  match msg with
+  | NewCharacter -> {
+      let currentDocs = syncedDocuments(model, model.character, model.turn);
+      let doc = newCharacterDocument(currentDocs);
+      let documents = addDocument(currentDocs, doc);
+      buildModel(model, documents, doc.id, doc.character, doc.turn, "New character created", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+    }
+  | SelectCharacter p -> {
+      let currentDocs = syncedDocuments(model, model.character, model.turn);
+      let doc = findDocument(currentDocs, fieldText(p));
+      buildModel(model, currentDocs, doc.id, doc.character, doc.turn, "Selected " + doc.character.build.identity.name, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+    }
+  | DuplicateSelected -> {
+      let currentDocs = syncedDocuments(model, model.character, model.turn);
+      let doc = duplicateSelectedDocument(currentDocs, model.selectedId);
+      let documents = addDocument(currentDocs, doc);
+      buildModel(model, documents, doc.id, doc.character, doc.turn, "Duplicated character", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+    }
+  | DeleteSelected -> {
+      let currentDocs = syncedDocuments(model, model.character, model.turn);
+      let remaining = ensureNonEmpty(deleteDocument(currentDocs, model.selectedId));
+      let doc = firstDocument(remaining);
+      buildModel(model, remaining, doc.id, doc.character, doc.turn, "Deleted character", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+    }
+  | SetName p -> withCharacter(model, setName(character, fieldText(p)), "Name updated")
+  | SetGender p -> withCharacter(model, setGender(character, genderFromId(fieldText(p))), "Gender updated")
+  | SuggestName -> {
+      var suggestion = suggestCharacterNameRandom(build.species, build.identity.gender);
+      let named = suggestion.name == "" ? character : setName(character, suggestion.name);
+      let nextSelection = setSelectionRollSummary(model.selection, suggestion.status);
+      withModel(model, named, model.turn, suggestion.status, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, nextSelection);
+    }
+  | SelectSpecies p -> {
+      let species = speciesFromId(fieldText(p), build.species);
+      withCharacter(model, setSpecies(character, species), "Species updated");
+    }
+  | SetDragonbornAncestry p -> {
+      let next = setDragonbornAncestry(character, dragonbornAncestryFromId(fieldText(p)));
+      withCharacter(model, next, "Dragonborn ancestry selected: " + dragonbornAncestryName(next.build.speciesOptions.dragonbornAncestry));
+    }
+  | SetElfLineage p -> {
+      let next = setElfLineage(character, elfLineageFromId(fieldText(p)));
+      withCharacter(model, next, "Elf lineage selected: " + elfLineageName(next.build.speciesOptions.elfLineage));
+    }
+  | SetElfBonusSkill p -> {
+      let next = setElfBonusSkill(character, skillFromId(fieldText(p), Perception));
+      withCharacter(model, next, "Elf bonus skill selected: " + skillName(next.build.speciesOptions.elfBonusSkill));
+    }
+  | SetGnomeLineage p -> {
+      let next = setGnomeLineage(character, gnomeLineageFromId(fieldText(p)));
+      withCharacter(model, next, "Gnome lineage selected: " + gnomeLineageName(next.build.speciesOptions.gnomeLineage));
+    }
+  | SetGoliathAncestry p -> {
+      let next = setGoliathAncestry(character, goliathAncestryFromId(fieldText(p)));
+      withCharacter(model, next, "Goliath ancestry selected: " + goliathAncestryName(next.build.speciesOptions.goliathAncestry));
+    }
+  | SetHumanBonusSkill p -> {
+      let next = setHumanBonusSkill(character, skillFromId(fieldText(p), Perception));
+      withCharacter(model, next, "Human bonus skill selected: " + skillName(next.build.speciesOptions.humanBonusSkill));
+    }
+  | SetHumanBonusFeat p -> {
+      let next = setHumanBonusFeat(character, fieldText(p));
+      withCharacter(model, next, "Human bonus feat selected");
+    }
+  | SetTieflingLineage p -> {
+      let next = setTieflingLineage(character, tieflingLineageFromId(fieldText(p)));
+      withCharacter(model, next, "Tiefling legacy selected: " + tieflingLineageName(next.build.speciesOptions.tieflingLineage));
+    }
+  | SetLineageSpellcastingAbility p -> {
+      let next = setLineageSpellcastingAbility(character, fieldText(p));
+      withCharacter(model, next, "Lineage spellcasting ability selected: " + abilitySpellcastingName(next.build.speciesOptions.lineageSpellcastingAbility));
+    }
+  | SelectClass p -> {
+      let class = classFromId(fieldText(p), build.class);
+      withCharacter(model, setClass(character, class), "Class updated");
+    }
+  | SetClassSkill p -> {
+      let skill = skillFromId(fieldText(p), Perception);
+      let next = toggleClassSkill(character, skill);
+      withCharacter(model, next, "Class skill selection updated");
+    }
+  | SetFightingStyle p -> {
+      let style = fightingStyleFromId(fieldText(p));
+      withCharacter(model, setFightingStyle(character, style), "Fighting style selected: " + fightingStyleName(style));
+    }
+  | SetClericOrder p -> {
+      let order = clericOrderFromId(fieldText(p));
+      withCharacter(model, setClericOrder(character, order), "Divine Order selected: " + clericOrderName(order));
+    }
+  | SetDruidOrder p -> {
+      let order = druidOrderFromId(fieldText(p));
+      withCharacter(model, setDruidOrder(character, order), "Primal Order selected: " + druidOrderName(order));
+    }
+  | SetExpertiseSkillOne p -> {
+      let skill = skillFromId(fieldText(p), Stealth);
+      withCharacter(model, setExpertiseSkillOne(character, skill), "Expertise skill selected: " + skillName(skill));
+    }
+  | SetExpertiseSkillTwo p -> {
+      let skill = skillFromId(fieldText(p), SleightOfHand);
+      withCharacter(model, setExpertiseSkillTwo(character, skill), "Expertise skill selected: " + skillName(skill));
+    }
+  | SelectBackground p -> {
+      let background = backgroundFromId(fieldText(p), build.background);
+      withCharacter(model, setBackground(character, background), "Background updated");
+    }
+  | SetLevel p -> withCharacter(model, setLevel(character, fieldInt(p)), "Level updated")
+  | SetStrength p -> withCharacter(model, setScoreWithBackgroundBonuses(character, Strength, fieldInt(p), model.selection), "Strength updated")
+  | SetDexterity p -> withCharacter(model, setScoreWithBackgroundBonuses(character, Dexterity, fieldInt(p), model.selection), "Dexterity updated")
+  | SetConstitution p -> withCharacter(model, setScoreWithBackgroundBonuses(character, Constitution, fieldInt(p), model.selection), "Constitution updated")
+  | SetIntelligence p -> withCharacter(model, setScoreWithBackgroundBonuses(character, Intelligence, fieldInt(p), model.selection), "Intelligence updated")
+  | SetWisdom p -> withCharacter(model, setScoreWithBackgroundBonuses(character, Wisdom, fieldInt(p), model.selection), "Wisdom updated")
+  | SetCharisma p -> withCharacter(model, setScoreWithBackgroundBonuses(character, Charisma, fieldInt(p), model.selection), "Charisma updated")
+  | IncreaseStrength -> withCharacter(model, adjustPointBuyScore(character, Strength, 1, model.selection), "Strength increased")
+  | DecreaseStrength -> withCharacter(model, adjustPointBuyScore(character, Strength, -1, model.selection), "Strength decreased")
+  | IncreaseDexterity -> withCharacter(model, adjustPointBuyScore(character, Dexterity, 1, model.selection), "Dexterity increased")
+  | DecreaseDexterity -> withCharacter(model, adjustPointBuyScore(character, Dexterity, -1, model.selection), "Dexterity decreased")
+  | IncreaseConstitution -> withCharacter(model, adjustPointBuyScore(character, Constitution, 1, model.selection), "Constitution increased")
+  | DecreaseConstitution -> withCharacter(model, adjustPointBuyScore(character, Constitution, -1, model.selection), "Constitution decreased")
+  | IncreaseIntelligence -> withCharacter(model, adjustPointBuyScore(character, Intelligence, 1, model.selection), "Intelligence increased")
+  | DecreaseIntelligence -> withCharacter(model, adjustPointBuyScore(character, Intelligence, -1, model.selection), "Intelligence decreased")
+  | IncreaseWisdom -> withCharacter(model, adjustPointBuyScore(character, Wisdom, 1, model.selection), "Wisdom increased")
+  | DecreaseWisdom -> withCharacter(model, adjustPointBuyScore(character, Wisdom, -1, model.selection), "Wisdom decreased")
+  | IncreaseCharisma -> withCharacter(model, adjustPointBuyScore(character, Charisma, 1, model.selection), "Charisma increased")
+  | DecreaseCharisma -> withCharacter(model, adjustPointBuyScore(character, Charisma, -1, model.selection), "Charisma decreased")
+  | ToggleShield p -> withCharacter(model, setShield(character, p.value), "Shield toggled")
+  | SetDamageText p -> withInputs(model, fieldText(p), model.healingText, model.tempText, "Damage amount edited")
+  | SetHealingText p -> withInputs(model, model.damageText, fieldText(p), model.tempText, "Healing amount edited")
+  | SetTempText p -> withInputs(model, model.damageText, model.healingText, fieldText(p), "Temp HP amount edited")
+  | SetSaveText p -> withSaveText(model, fieldText(p), "Export text edited")
+  | SetImportText p -> withImportText(model, fieldText(p), "Import text edited")
+  | ExportSelected -> {
+      let text = saveDocument(selectedDocument(model));
+      withSaveText(model, text, "Exported selected character")
+    }
+  | ExportDownloaded -> noCmd(Model(
+      catalog = model.catalog,
+      contentPacks = model.contentPacks,
+      documents = model.documents,
+      selectedId = model.selectedId,
+      character = model.character,
+      turn = model.turn,
+      status = "Export downloaded",
+      damageText = model.damageText,
+      healingText = model.healingText,
+      tempText = model.tempText,
+      saveText = model.saveText,
+      importText = model.importText,
+      selection = model.selection
+    ))
+  | ImportCharacterFile p -> {
+      let currentDocs = syncedDocuments(model, model.character, model.turn);
+      let fallback = selectedDocument(model);
+      let importText = fieldText(p);
+      let result = loadDocument(model.catalog, importText, fallback);
+      let withoutOld = deleteDocument(currentDocs, result.document.id);
+      let documents = addDocument(withoutOld, result.document);
+      buildModel(model, documents, result.document.id, result.document.character, result.document.turn, result.status, model.damageText, model.healingText, model.tempText, saveDocument(result.document), "", model.selection);
+    }
+  | ImportDocument -> {
+      let currentDocs = syncedDocuments(model, model.character, model.turn);
+      let fallback = selectedDocument(model);
+      let result = loadDocument(model.catalog, model.importText, fallback);
+      let withoutOld = deleteDocument(currentDocs, result.document.id);
+      let documents = addDocument(withoutOld, result.document);
+      buildModel(model, documents, result.document.id, result.document.character, result.document.turn, result.status, model.damageText, model.healingText, model.tempText, saveDocument(result.document), model.importText, model.selection);
+    }
+  | SetNotesText p -> {
+      let result = setNotes(character, fieldText(p));
+      withCharacter(model, result.character, result.line);
+    }
+  | SetActiveTab p -> {
+      let selection = setSelectionTab(model.selection, fieldText(p));
+      withSelection(model, selection, "Editor tab changed");
+    }
+  | SetBuilderStep p -> {
+      let selection = setSelectionBuilderStep(model.selection, builderStepFromText(fieldText(p)));
+      withSelection(model, selection, "Builder step changed");
+    }
+  | GoIdentity -> {
+      let selection = setSelectionBuilderStep(model.selection, IdentityStep);
+      withSelection(model, selection, "Builder step changed");
+    }
+  | GoSpeciesOptions -> {
+      let selection = setSelectionBuilderStep(model.selection, SpeciesOptionsStep);
+      withSelection(model, selection, "Builder step changed");
+    }
+  | GoClassOptions -> {
+      let selection = setSelectionBuilderStep(model.selection, ClassOptionsStep);
+      withSelection(model, selection, "Builder step changed");
+    }
+  | GoAbilities -> {
+      let selection = setSelectionBuilderStep(model.selection, AbilitiesStep);
+      withSelection(model, selection, "Builder step changed");
+    }
+  | GoEquipment -> {
+      let selection = setSelectionBuilderStep(model.selection, EquipmentStep);
+      withSelection(model, selection, "Builder step changed");
+    }
+  | GoReview -> {
+      let selection = setSelectionBuilderStep(model.selection, ReviewStep);
+      withSelection(model, selection, "Builder step changed");
+    }
+  | SetEquipmentCategory p -> {
+      let selection = setSelectionEquipmentCategory(model.selection, fieldText(p));
+      withSelection(model, selection, "Equipment category changed");
+    }
+  | SetEquipmentSearch p -> {
+      let selection = setSelectionEquipmentSearch(model.selection, fieldText(p));
+      withSelection(model, selection, "Equipment search edited");
+    }
+  | SetAbilityMethod p -> {
+      let selection = setSelectionAbilityMethod(model.selection, fieldText(p));
+      withSelection(model, selection, "Ability method changed");
+    }
+
+  | SelectStandardScore p -> {
+      let selection = setSelectionStandardSelectedScore(model.selection, fieldText(p));
+      withSelection(model, selection, "Standard array score selected");
+    }
+  | AssignStandardStrength -> {
+      let nextCharacter = assignSelectedStandardScore(character, Strength, model.selection);
+      let selection = setSelectionStandardAssignment(model.selection, Strength, model.selection.standardSelectedScore);
+      withModel(model, nextCharacter, model.turn, "Strength assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | AssignStandardDexterity -> {
+      let nextCharacter = assignSelectedStandardScore(character, Dexterity, model.selection);
+      let selection = setSelectionStandardAssignment(model.selection, Dexterity, model.selection.standardSelectedScore);
+      withModel(model, nextCharacter, model.turn, "Dexterity assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | AssignStandardConstitution -> {
+      let nextCharacter = assignSelectedStandardScore(character, Constitution, model.selection);
+      let selection = setSelectionStandardAssignment(model.selection, Constitution, model.selection.standardSelectedScore);
+      withModel(model, nextCharacter, model.turn, "Constitution assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | AssignStandardIntelligence -> {
+      let nextCharacter = assignSelectedStandardScore(character, Intelligence, model.selection);
+      let selection = setSelectionStandardAssignment(model.selection, Intelligence, model.selection.standardSelectedScore);
+      withModel(model, nextCharacter, model.turn, "Intelligence assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | AssignStandardWisdom -> {
+      let nextCharacter = assignSelectedStandardScore(character, Wisdom, model.selection);
+      let selection = setSelectionStandardAssignment(model.selection, Wisdom, model.selection.standardSelectedScore);
+      withModel(model, nextCharacter, model.turn, "Wisdom assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | AssignStandardCharisma -> {
+      let nextCharacter = assignSelectedStandardScore(character, Charisma, model.selection);
+      let selection = setSelectionStandardAssignment(model.selection, Charisma, model.selection.standardSelectedScore);
+      withModel(model, nextCharacter, model.turn, "Charisma assigned", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | SetBackgroundBonusMode p -> {
+      let selection = setSelectionBackgroundBonusMode(model.selection, fieldText(p));
+      let next = transitionBackgroundBonuses(character, model.selection, selection);
+      withModel(model, next, model.turn, "Background bonus mode changed", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | SetBackgroundBonusPrimary p -> {
+      let selection = setSelectionBackgroundBonusPrimary(model.selection, fieldText(p));
+      let next = transitionBackgroundBonuses(character, model.selection, selection);
+      withModel(model, next, model.turn, "Background primary bonus changed", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | SetBackgroundBonusSecondary p -> {
+      let selection = setSelectionBackgroundBonusSecondary(model.selection, fieldText(p));
+      let next = transitionBackgroundBonuses(character, model.selection, selection);
+      withModel(model, next, model.turn, "Background secondary bonus changed", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | SetBackgroundBonusTertiary p -> {
+      let selection = setSelectionBackgroundBonusTertiary(model.selection, fieldText(p));
+      let next = transitionBackgroundBonuses(character, model.selection, selection);
+      withModel(model, next, model.turn, "Background tertiary bonus changed", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | ApplyBackgroundBonuses -> {
+      let next = applySelectedBackgroundBonuses(character, model.selection);
+      withCharacter(model, next, "Background ability bonuses applied");
+    }
+  | ApplyStandardArray -> {
+      let next = applyScoresWithBackgroundBonuses(character, standardArrayScores(), model.selection);
+      let selection = standardArrayDefaultSelection(model.selection);
+      withModel(model, next, model.turn, "Standard array applied", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | ResetPointBuy -> {
+      let next = applyScoresWithBackgroundBonuses(character, pointBuyBaseScores(), model.selection);
+      let selection = clearStandardArraySelection(model.selection);
+      withModel(model, next, model.turn, "Point buy reset to 8s", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, selection);
+    }
+  | SetRollMode p -> {
+      let selection = setSelectionRollMode(model.selection, fieldText(p));
+      withSelection(model, selection, "Roll mode changed");
+    }
+  | SetRollSeed p -> {
+      let selection = setSelectionRollSeed(model.selection, fieldText(p));
+      withSelection(model, selection, "Roll seed changed");
+    }
+  | RollAbilityScores -> {
+      var rolled = rollAbilityScoresRandom(model.selection.rollMode);
+      let nextCharacter = applyScoresWithBackgroundBonuses(character, rolled.scores, model.selection);
+      let nextSelection = setSelectionRollSummary(model.selection, join(rolled.lines, " | "));
+      withModel(model, nextCharacter, model.turn, "Rolled ability scores", model.damageText, model.healingText, model.tempText, model.saveText, model.importText, nextSelection);
+    }
+  | AddWeaponById p -> {
+      let weapon = weaponFromId(model.catalog, fieldText(p), Shortsword);
+      withCharacter(model, equipWeapon(character, weapon), "Weapon equipped");
+    }
+  | AddArmorById p -> {
+      let armor = armorFromId(model.catalog, fieldText(p), LeatherArmor);
+      withCharacter(model, equipArmor(character, armor), "Armor equipped");
+    }
+  | AddToolById p -> {
+      let tool = toolFromId(model.catalog, fieldText(p), ThievesTools);
+      withCharacter(model, addTool(character, tool), "Tool added");
+    }
+  | AddGearById p -> {
+      let gear = gearFromId(model.catalog, fieldText(p), ExplorerPack);
+      withCharacter(model, addGear(character, gear), "Gear added");
+    }
+  | RemoveWeaponById p -> {
+      let weapon = weaponFromId(model.catalog, fieldText(p), Shortsword);
+      withCharacter(model, unequipWeapon(character, weapon), "Weapon removed");
+    }
+  | ClearArmorMsg -> withCharacter(model, clearArmor(character), "Armor cleared")
+  | RemoveToolById p -> {
+      let tool = toolFromId(model.catalog, fieldText(p), ThievesTools);
+      withCharacter(model, removeTool(character, tool), "Tool removed");
+    }
+  | RemoveGearById p -> {
+      let gear = gearFromId(model.catalog, fieldText(p), ExplorerPack);
+      withCharacter(model, removeGear(character, gear), "Gear removed");
+    }
+  | ApplyDamage -> {
+      let amount = intFromText(model.damageText);
+      let result = takeDamage(character, amount);
+      withCharacter(model, result.character, result.line);
+    }
+  | ApplyHealing -> {
+      let amount = intFromText(model.healingText);
+      let result = heal(character, amount);
+      withCharacter(model, result.character, result.line);
+    }
+  | ApplyTempHp -> {
+      let amount = intFromText(model.tempText);
+      let result = gainTemporaryHp(character, amount);
+      withCharacter(model, result.character, result.line);
+    }
+  | UseSneakAttack -> {
+      let nextTurn = useSneakAttack(model.turn);
+      withTurn(model, nextTurn, "Sneak Attack spent for this turn");
+    }
+  | StartTurn -> {
+      let nextTurn = startTurn(model.turn);
+      withTurn(model, nextTurn, "New turn started; turn resources reset");
+    }
+  | ShortRestMsg -> {
+      let result = shortRest(character);
+      withCharacter(model, result.character, result.line);
+    }
+  | LongRestMsg -> {
+      let result = longRest(character);
+      withModel(model, result.character, sampleTurnResources(), result.line, model.damageText, model.healingText, model.tempText, model.saveText, model.importText, model.selection);
+    }
+  | AddProne -> {
+      let result = addCondition(character, Prone);
+      withCharacter(model, result.character, result.line);
+    }
+  | RemoveProne -> {
+      let result = removeCondition(character, Prone);
+      withCharacter(model, result.character, result.line);
+    }
+  | AddConditionById p -> {
+      let condition = conditionFromId(fieldText(p));
+      let result = addCondition(character, condition);
+      withCharacter(model, result.character, result.line);
+    }
+  | RemoveConditionById p -> {
+      let condition = conditionFromId(fieldText(p));
+      let result = removeCondition(character, condition);
+      withCharacter(model, result.character, result.line);
+    }
+  | ToggleContentPack p -> {
+      let packs = toggleContentPack(model.contentPacks, fieldText(p));
+      withContentPacks(model, packs, "Content pack toggled");
+    }
+  | ResetSample -> {
+      let documents = initialDocuments();
+      let doc = firstDocument(documents);
+      buildModel(model, documents, doc.id, doc.character, doc.turn, "Reset sample characters", "7", "6", "5", "", "", defaultSelection());
+    }
+}
+
+
+import * from "./app/appui";
+
+run(init(), view, update);

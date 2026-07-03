@@ -1,0 +1,152 @@
+// Character Forge action projections
+//
+// Actions are computed from build + state + rules. They are not stored on the
+// character. This gives sheet/combat UI a structured list of things the
+// character can do without duplicating derived data in persistence.
+
+import * from "./abilities";
+import * from "./character";
+import * from "./rules";
+
+export type ActionKind = {
+  | WeaponAttackAction
+  | FeatureAction
+  | UtilityKind
+}
+
+export type ActionTiming = {
+  | MainAction
+  | BonusAction
+  | ReactionAction
+  | PassiveAction
+  | UtilityAction
+}
+
+export type CharacterAction = { name, kind, timing, source, attackBonus, damageText, description, line }
+
+export function actionKindName(kind) {
+  match kind with
+  | WeaponAttackAction -> "Weapon Attack"
+  | FeatureAction -> "Feature"
+  | UtilityKind -> "Utility";
+}
+
+export function actionTimingName(timing) {
+  match timing with
+  | MainAction -> "Action"
+  | BonusAction -> "Bonus Action"
+  | ReactionAction -> "Reaction"
+  | PassiveAction -> "Passive"
+  | UtilityAction -> "Utility";
+}
+
+export function formatDamage(die, bonus) {
+  let bonusText = formatMod(bonus);
+  $"{die}{bonusText}";
+}
+
+export function weaponAction(character, rules, weapon) {
+  let name = weaponName(weapon);
+  let timing = MainAction;
+  let kind = WeaponAttackAction;
+  let attack = weaponAttackBonus(character, rules, weapon);
+  let attackText = formatMod(attack);
+  let damageBonus = weaponDamageBonus(character, weapon);
+  let damageText = formatDamage(weaponDamage(weapon), damageBonus);
+  let timingText = actionTimingName(timing);
+  CharacterAction(
+    name = name,
+    kind = kind,
+    timing = timing,
+    source = "Equipment",
+    attackBonus = attack,
+    damageText = damageText,
+    description = "Make an attack with this equipped weapon.",
+    line = $"{name} ({timingText}): attack {attackText}, damage {damageText}"
+  );
+}
+
+export function weaponActions(character, rules) {
+  [ weaponAction(character, rules, w) for w <- character.build.loadout.weapons ];
+}
+
+export function featureAction(name, timing, source, description) {
+  let timingText = actionTimingName(timing);
+  CharacterAction(
+    name = name,
+    kind = FeatureAction,
+    timing = timing,
+    source = source,
+    attackBonus = 0,
+    damageText = "",
+    description = description,
+    line = $"{name} ({timingText}): {description}"
+  );
+}
+
+export function classActions(build) {
+  match build.class with
+  | Barbarian -> [featureAction("Rage", BonusAction, "Barbarian", "Enter a battle focus that improves weapon fighting and durability.")]
+  | Bard -> [featureAction("Bardic Inspiration", BonusAction, "Bard", "Inspire another creature with a bonus die.")]
+  | Cleric -> [featureAction("Cast a Spell", MainAction, "Cleric", "Cast one prepared spell."), featureAction("Channel Divinity", MainAction, "Cleric", "Use a divine class feature.")]
+  | Druid -> [featureAction("Cast a Spell", MainAction, "Druid", "Cast one prepared spell."), featureAction("Wild Shape", BonusAction, "Druid", "Assume a beast form when available.")]
+  | Fighter -> build.level >= 2 ? [
+      featureAction("Second Wind", BonusAction, "Fighter", "Regain a small amount of HP."),
+      featureAction("Action Surge", MainAction, "Fighter", "Take one additional action on your turn.")
+    ] : [
+      featureAction("Second Wind", BonusAction, "Fighter", "Regain a small amount of HP.")
+    ]
+  | Monk -> [featureAction("Martial Arts", PassiveAction, "Monk", "Use martial training for unarmed and monk weapon attacks.")]
+  | Paladin -> [featureAction("Lay on Hands", MainAction, "Paladin", "Restore HP from a healing pool."), featureAction("Divine Smite", PassiveAction, "Paladin", "Empower a qualifying weapon hit.")]
+  | Ranger -> [featureAction("Hunter's Mark", BonusAction, "Ranger", "Mark a foe and improve attacks against it.")]
+  | Rogue -> build.level >= 2 ? [
+      featureAction("Sneak Attack", PassiveAction, "Rogue", "Deal extra damage once per turn when the attack qualifies."),
+      featureAction("Cunning Action", BonusAction, "Rogue", "Dash, Disengage, or Hide as a bonus action.")
+    ] : [
+      featureAction("Sneak Attack", PassiveAction, "Rogue", "Deal extra damage once per turn when the attack qualifies.")
+    ]
+  | Sorcerer -> [featureAction("Cast a Spell", MainAction, "Sorcerer", "Cast one known spell."), featureAction("Innate Sorcery", BonusAction, "Sorcerer", "Briefly empower sorcerous magic.")]
+  | Warlock -> [featureAction("Cast a Spell", MainAction, "Warlock", "Cast one pact spell."), featureAction("Eldritch Invocation", PassiveAction, "Warlock", "Benefit from an eldritch invocation.")]
+  | Wizard -> [
+      featureAction("Cast a Spell", MainAction, "Wizard", "Cast one prepared spell."),
+      featureAction("Arcane Recovery", UtilityAction, "Wizard", "Recover some expended spell slots after a rest.")
+    ];
+}
+
+export function speciesActions(build) {
+  match build.species with
+  | Aasimar -> [featureAction("Healing Hands", MainAction, "Aasimar", "Restore a small amount of HP to a creature.")]
+  | Dragonborn -> [featureAction("Breath Weapon", MainAction, "Dragonborn", "Exhale elemental energy from your ancestry.")]
+  | Dwarf -> []
+  | Elf -> []
+  | Gnome -> []
+  | Goliath -> [featureAction("Giant Ancestry", PassiveAction, "Goliath", "Use the benefit tied to your giant ancestry.")]
+  | Halfling -> []
+  | Human -> []
+  | Orc -> [featureAction("Adrenaline Rush", BonusAction, "Orc", "Surge forward and gain a short burst of toughness.")]
+  | Tiefling -> [featureAction("Fiendish Legacy", PassiveAction, "Tiefling", "Use magic and resistance tied to your fiendish legacy.")];
+}
+
+export function backgroundActions(build) {
+  match build.background with
+  | Acolyte -> [featureAction("Magic Initiate", PassiveAction, "Acolyte", "You gained an origin feat from your background.")]
+  | Artisan -> [featureAction("Crafter", PassiveAction, "Artisan", "You gained an origin feat from your background.")]
+  | Charlatan -> [featureAction("Skilled", PassiveAction, "Charlatan", "You gained an origin feat from your background.")]
+  | Criminal -> [featureAction("Alert", PassiveAction, "Criminal", "Add your proficiency bonus to Initiative and swap Initiative with a willing ally.")]
+  | Entertainer -> [featureAction("Musician", PassiveAction, "Entertainer", "You gained an origin feat from your background.")]
+  | Farmer -> [featureAction("Tough", PassiveAction, "Farmer", "You gained an origin feat from your background.")]
+  | Guard -> [featureAction("Alert", PassiveAction, "Guard", "You gained an origin feat from your background.")]
+  | Guide -> [featureAction("Magic Initiate", PassiveAction, "Guide", "You gained an origin feat from your background.")]
+  | Hermit -> [featureAction("Healer", PassiveAction, "Hermit", "You gained an origin feat from your background.")]
+  | Merchant -> [featureAction("Lucky", PassiveAction, "Merchant", "You gained an origin feat from your background.")]
+  | Noble -> [featureAction("Skilled", PassiveAction, "Noble", "You gained an origin feat from your background.")]
+  | Sage -> [featureAction("Magic Initiate", PassiveAction, "Sage", "You gained an origin feat from your background.")]
+  | Sailor -> [featureAction("Tavern Brawler", PassiveAction, "Sailor", "You gained an origin feat from your background.")]
+  | Scribe -> [featureAction("Skilled", PassiveAction, "Scribe", "You gained an origin feat from your background.")]
+  | Soldier -> [featureAction("Savage Attacker", PassiveAction, "Soldier", "You gained an origin feat from your background.")]
+  | Wayfarer -> [featureAction("Lucky", PassiveAction, "Wayfarer", "You gained an origin feat from your background.")];
+}
+
+export function characterActions(character, rules) {
+  weaponActions(character, rules) + classActions(character.build) + speciesActions(character.build) + backgroundActions(character.build);
+}

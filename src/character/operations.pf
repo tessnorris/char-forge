@@ -1,0 +1,7 @@
+// Compatibility module for operation imports.
+//
+// New code should import buildops.pf for durable character edits and
+// stateops.pf for gameplay/session state transitions.
+
+import * from "./buildops";
+import * from "./stateops";

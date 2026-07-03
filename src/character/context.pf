@@ -1,0 +1,35 @@
+// Character Forge context
+//
+// CharacterContext is a pure bundle of the ambient inputs needed to derive a
+// character view. It is not global state and it is not cached derived data on
+// the character. Build/state remain the stored facts; context is assembled at
+// the boundary where rules/projections are needed.
+
+import * from "./character";
+import * from "../content/content";
+import * from "./rules";
+
+export type CharacterContext = { catalog, rules }
+
+export function contextForBuild(catalog, build) {
+  CharacterContext(
+    catalog = catalog,
+    rules = rulesForBuild(build)
+  );
+}
+
+export function contextForCharacter(catalog, character) {
+  contextForBuild(catalog, character.build);
+}
+
+export function projectCharacter(character, context) {
+  projectCharacterWithRules(character, context.rules);
+}
+
+export function rulesFromContext(context) {
+  context.rules;
+}
+
+export function catalogFromContext(context) {
+  context.catalog;
+}

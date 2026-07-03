@@ -1,0 +1,145 @@
+// Character Forge domain: abilities
+
+export type Ability = {
+  | Strength
+  | Dexterity
+  | Constitution
+  | Intelligence
+  | Wisdom
+  | Charisma
+}
+
+export type AbilityInfo = { id, name, short }
+
+export let abilities = [
+  AbilityInfo(id = Strength, name = "Strength", short = "STR"),
+  AbilityInfo(id = Dexterity, name = "Dexterity", short = "DEX"),
+  AbilityInfo(id = Constitution, name = "Constitution", short = "CON"),
+  AbilityInfo(id = Intelligence, name = "Intelligence", short = "INT"),
+  AbilityInfo(id = Wisdom, name = "Wisdom", short = "WIS"),
+  AbilityInfo(id = Charisma, name = "Charisma", short = "CHA")
+];
+
+export type AbilityScores = {
+  strength,
+  dexterity,
+  constitution,
+  intelligence,
+  wisdom,
+  charisma
+}
+
+export function abilityName(ability) {
+  match ability with
+  | Strength -> "Strength"
+  | Dexterity -> "Dexterity"
+  | Constitution -> "Constitution"
+  | Intelligence -> "Intelligence"
+  | Wisdom -> "Wisdom"
+  | Charisma -> "Charisma";
+}
+
+export function abilityShort(ability) {
+  match ability with
+  | Strength -> "STR"
+  | Dexterity -> "DEX"
+  | Constitution -> "CON"
+  | Intelligence -> "INT"
+  | Wisdom -> "WIS"
+  | Charisma -> "CHA";
+}
+
+export function getScore(scores, ability) {
+  match ability with
+  | Strength -> scores.strength
+  | Dexterity -> scores.dexterity
+  | Constitution -> scores.constitution
+  | Intelligence -> scores.intelligence
+  | Wisdom -> scores.wisdom
+  | Charisma -> scores.charisma;
+}
+
+// D&D ability modifiers use floor((score - 10) / 2). Pfun integer division
+// truncates toward zero, so negative odd values need one extra step.
+export function floorDiv2(n) {
+  if n >= 0 then n / 2 else (n - 1) / 2;
+}
+
+export function abilityMod(score) {
+  floorDiv2(score - 10);
+}
+
+export function formatMod(mod) {
+  if mod >= 0 then $"+{mod}" else $"{mod}";
+}
+
+export function scoreLine(scores, ability) {
+  let score = getScore(scores, ability);
+  let mod = abilityMod(score);
+  let short = abilityShort(ability);
+  let modText = formatMod(mod);
+  $"{short} {score} ({modText})";
+}
+
+
+export function clampAbilityScore(score) {
+  if score < 1 then
+    1
+  else if score > 30 then
+    30
+  else
+    score;
+}
+
+export function setScore(scores, ability, score) {
+  let clean = clampAbilityScore(score);
+  match ability with
+  | Strength -> AbilityScores(
+      strength = clean,
+      dexterity = scores.dexterity,
+      constitution = scores.constitution,
+      intelligence = scores.intelligence,
+      wisdom = scores.wisdom,
+      charisma = scores.charisma
+    )
+  | Dexterity -> AbilityScores(
+      strength = scores.strength,
+      dexterity = clean,
+      constitution = scores.constitution,
+      intelligence = scores.intelligence,
+      wisdom = scores.wisdom,
+      charisma = scores.charisma
+    )
+  | Constitution -> AbilityScores(
+      strength = scores.strength,
+      dexterity = scores.dexterity,
+      constitution = clean,
+      intelligence = scores.intelligence,
+      wisdom = scores.wisdom,
+      charisma = scores.charisma
+    )
+  | Intelligence -> AbilityScores(
+      strength = scores.strength,
+      dexterity = scores.dexterity,
+      constitution = scores.constitution,
+      intelligence = clean,
+      wisdom = scores.wisdom,
+      charisma = scores.charisma
+    )
+  | Wisdom -> AbilityScores(
+      strength = scores.strength,
+      dexterity = scores.dexterity,
+      constitution = scores.constitution,
+      intelligence = scores.intelligence,
+      wisdom = clean,
+      charisma = scores.charisma
+    )
+  | Charisma -> AbilityScores(
+      strength = scores.strength,
+      dexterity = scores.dexterity,
+      constitution = scores.constitution,
+      intelligence = scores.intelligence,
+      wisdom = scores.wisdom,
+      charisma = clean
+    );
+}

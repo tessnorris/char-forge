@@ -1,0 +1,246 @@
+import * from "io";
+import * from "./character/abilities";
+import * from "./engine/currency";
+import * from "./engine/dice";
+import * from "./engine/initiative";
+import * from "./character/character";
+import * from "./character/rules";
+import * from "./character/actions";
+import * from "./character/resources";
+import * from "./character/buildops";
+import * from "./character/stateops";
+import * from "./content/content";
+
+proc assertEqual(label, actual, expected) {
+  if actual == expected then
+    println($"PASS {label}: {actual}")
+  else
+    println($"FAIL {label}: expected {expected}, got {actual}");
+}
+
+proc showParsed(input) {
+  match parseDiceNotation(input) with
+  | ParsedDice p -> {
+      let notation = p.notation;
+      let count = notation.count;
+      let sides = notation.sides;
+      let modifier = notation.modifier;
+      println($"{input} => count={count}, sides={sides}, mod={modifier}");
+    }
+  | InvalidDice e -> {
+      let message = e.message;
+      println($"{input} => invalid: {message}");
+    }
+}
+
+println("== Character Forge / Pfun domain demo ==");
+
+let scores = AbilityScores(
+  strength = 15,
+  dexterity = 14,
+  constitution = 13,
+  intelligence = 12,
+  wisdom = 10,
+  charisma = 8
+);
+
+println(scoreLine(scores, Strength));
+println(scoreLine(scores, Dexterity));
+println(scoreLine(scores, Charisma));
+
+assertEqual("STR mod", abilityMod(15), 2);
+assertEqual("CHA mod", abilityMod(8), -1);
+assertEqual("format +2", formatMod(2), "+2");
+assertEqual("format -1", formatMod(-1), "-1");
+assertEqual("0 cp", formatCurrency(0), "0 GP");
+assertEqual("123 cp", formatCurrency(123), "1 GP, 2 SP, 3 CP");
+
+showParsed("d20");
+showParsed("2d6");
+showParsed("4d6 + 2");
+showParsed("bad");
+
+let rng = Rng { 12345 };
+let abilityRoll = generateAbilityScore(rng, 4, 1);
+let abilityRolls = abilityRoll.rolls;
+let abilityKept = abilityRoll.kept;
+let abilitySum = abilityRoll.sum;
+println($"ability roll: rolls={abilityRolls}, kept={abilityKept}, sum={abilitySum}");
+
+match parseDiceNotation("2d8+3") with
+| ParsedDice p -> {
+    let rolled = rollNotation(abilityRoll.rng, p.notation);
+    let rolledRolls = rolled.rolls;
+    let rolledTotal = rolled.total;
+    println($"rolled 2d8+3: rolls={rolledRolls}, total={rolledTotal}");
+  }
+| InvalidDice e -> println(e.message);
+
+let alice = Combatant(id = "a", name = "Alice", init = 17, dex = 14, ac = 15, hp = 10, tieHistory = [], isPC = true);
+let bob = Combatant(id = "b", name = "Bob", init = 17, dex = 12, ac = 16, hp = 12, tieHistory = [], isPC = true);
+let goblin = Combatant(id = "g", name = "Goblin", init = 12, dex = 14, ac = 13, hp = 7, tieHistory = [], isPC = false);
+let order = sortCombatants([goblin, bob, alice]);
+let orderNames = [ c.name for c <- order ];
+println($"initiative order: {orderNames}");
+
+match findTieGroup([alice, bob, goblin]) with
+| TieGroup group -> {
+    let groupNames = [ c.name for c <- group ];
+    println($"tie group: {groupNames}");
+  }
+| NoTieGroup -> println("no unresolved tie");
+
+println("== Character model demo ==");
+let character = sampleCharacter();
+println(summaryLine(character));
+
+let context = contextForCharacter(demoCatalog(), character);
+let rules = rulesFromContext(context);
+let view = projectCharacter(character, context);
+let pb = view.proficiencyBonus;
+let ac = view.armorClass;
+let initMod = view.initiativeMod;
+let hp = view.hitPointMax;
+let passive = view.passivePerception;
+let carry = view.carryingCapacity;
+println($"derived view: PB={pb}, AC={ac}, initiative={initMod}, HP={hp}, passive perception={passive}, carrying={carry}");
+
+let saveNames = view.savingThrows;
+println($"saving throws: {saveNames}");
+
+let skillNames = view.backgroundSkills;
+println($"background skills: {skillNames}");
+
+let toolNames = view.backgroundTools;
+println($"rule tools: {toolNames}");
+
+let features = rules.features;
+println($"rule features: {features}");
+
+let bonusLines = [ b.line for b <- view.bonuses ];
+println($"rule bonuses: {bonusLines}");
+
+let stealth = skillBonus(character, rules, Stealth);
+let sleight = skillBonus(character, rules, SleightOfHand);
+let perception = skillBonus(character, rules, Perception);
+println($"skill bonuses: stealth={stealth}, sleight={sleight}, perception={perception}");
+
+let armorText = view.equippedArmor;
+println($"equipped armor: {armorText}");
+
+let weaponLines = [ w.line for w <- view.weapons ];
+println($"weapon attacks: {weaponLines}");
+
+let items = view.equipment;
+println($"equipment: {items}");
+
+
+let actionViews = characterActions(character, rules);
+let actionLines = [ a.line for a <- actionViews ];
+println($"actions: {actionLines}");
+
+let currentHp = view.currentHp;
+let tempHp = view.temporaryHp;
+let hitDiceLeft = view.hitDiceRemaining;
+let conscious = view.isConscious;
+println($"play state: current HP={currentHp}, temp HP={tempHp}, hit dice left={hitDiceLeft}, conscious={conscious}");
+
+let health = healthView(character);
+let healthLine = health.line;
+println($"health: {healthLine}");
+
+let conditionList = conditionNames(character);
+println($"conditions: {conditionList}");
+
+let afterFiveDamage = damagePreview(character, 5);
+let afterSixHealing = healingPreview(character, 6);
+println($"hp preview: after 5 damage={afterFiveDamage}, after 6 healing={afterSixHealing}");
+
+let turn = sampleTurnResources();
+let resourceViews = characterResources(character, rules, turn);
+let resourceLines = [ r.line for r <- resourceViews ];
+println($"resources: {resourceLines}");
+
+let spentTurn = spendSneakAttack(turn);
+let spentResourceViews = characterResources(character, rules, spentTurn);
+let spentResourceLines = [ r.line for r <- spentResourceViews ];
+println($"after sneak attack: {spentResourceLines}");
+
+
+let damageResult = takeDamage(character, 7);
+let damageLine = damageResult.line;
+let damaged = damageResult.character;
+println($"operation: {damageLine}");
+
+let tempResult = gainTemporaryHp(damaged, 5);
+let tempLine = tempResult.line;
+let temped = tempResult.character;
+println($"operation: {tempLine}");
+
+let biggerDamage = takeDamage(temped, 8);
+let biggerDamageLine = biggerDamage.line;
+let hurt = biggerDamage.character;
+println($"operation: {biggerDamageLine}");
+
+let healResult = heal(hurt, 6);
+let healLine = healResult.line;
+let healedCharacter = healResult.character;
+println($"operation: {healLine}");
+
+let proneResult = addCondition(healedCharacter, Prone);
+let proneLine = proneResult.line;
+let proneCharacter = proneResult.character;
+let proneConditions = conditionNames(proneCharacter);
+println($"operation: {proneLine}, conditions={proneConditions}");
+
+let standResult = removeCondition(proneCharacter, Prone);
+let standLine = standResult.line;
+let standingCharacter = standResult.character;
+let standingConditions = conditionNames(standingCharacter);
+println($"operation: {standLine}, conditions={standingConditions}");
+
+let hitDieRoll = spendHitDie(rng, standingCharacter);
+let hitDieLine = hitDieRoll.line;
+let afterHitDie = hitDieRoll.character;
+let afterHitDieHp = afterHitDie.state.currentHp;
+let afterHitDiceLeft = hitDiceRemaining(afterHitDie);
+println($"operation: {hitDieLine}, hp={afterHitDieHp}, hit dice left={afterHitDiceLeft}");
+
+let longRestResult = longRest(afterHitDie);
+let longRestLine = longRestResult.line;
+let rested = longRestResult.character;
+let restedHp = rested.state.currentHp;
+let restedHitDice = hitDiceRemaining(rested);
+let restedConditions = conditionNames(rested);
+println($"operation: {longRestLine}, hp={restedHp}, hit dice left={restedHitDice}, conditions={restedConditions}");
+
+let usedTurn = useSneakAttack(turn);
+let refreshedTurn = startTurn(usedTurn);
+let refreshedResources = characterResources(character, rules, refreshedTurn);
+let refreshedLines = [ r.line for r <- refreshedResources ];
+println($"start turn resources: {refreshedLines}");
+
+
+println("== Content catalog demo ==");
+let catalog = demoCatalog();
+let refs = allContentRefs(catalog);
+let refLines = [ contentRefLine(r) for r <- refs ];
+println($"catalog refs: {refLines}");
+let resolvedSpeciesElf = requireContentName(catalog, "species.elf");
+let resolvedRubyRapier = requireContentName(catalog, "item.ruby-rapier-darkness-plus-2");
+println("resolved species.elf -> " + resolvedSpeciesElf);
+println("resolved item.ruby-rapier-darkness-plus-2 -> " + resolvedRubyRapier);
+
+println("== Build operations demo ==");
+let renamed = setName(character, "Ruby");
+println(summaryLine(renamed));
+let leveled = setLevel(renamed, 4);
+let leveledContext = contextForCharacter(demoCatalog(), leveled);
+let leveledRules = rulesFromContext(leveledContext);
+let leveledView = projectCharacter(leveled, leveledContext);
+let leveledPb = leveledView.proficiencyBonus;
+let leveledHp = leveledView.hitPointMax;
+let leveledLevel = leveled.build.level;
+println($"after build ops: level={leveledLevel}, PB={leveledPb}, HP={leveledHp}");
+
+println("done");

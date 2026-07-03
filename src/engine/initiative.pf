@@ -1,0 +1,78 @@
+// Character Forge domain: initiative ordering
+
+export type Ordering = {
+  | Less
+  | Equal
+  | Greater
+}
+
+export type Combatant = { id, name, init, dex, ac, hp, tieHistory, isPC }
+
+export type TieGroupResult = {
+  | TieGroup: combatants
+  | NoTieGroup
+}
+
+export function compareTieHistory(aHist, bHist) {
+  let maxLen = length(aHist) > length(bHist) ? length(aHist) : length(bHist);
+  compareTieHistoryAt(aHist, bHist, 0, maxLen);
+}
+
+export function tieValue(hist, index) {
+  if index < length(hist) then nth(hist, index) else 0;
+}
+
+export function compareTieHistoryAt(aHist, bHist, index, maxLen) {
+  if index >= maxLen then Equal
+  else {
+    let aRoll = tieValue(aHist, index);
+    let bRoll = tieValue(bHist, index);
+    if aRoll > bRoll then Less
+    else if aRoll < bRoll then Greater
+    else compareTieHistoryAt(aHist, bHist, index + 1, maxLen);
+  }
+}
+
+// Initiative order: init desc, dex desc, tie-roll history desc.
+// Less means a should appear before b.
+export function compareCombatants(a, b) {
+  if a.init > b.init then Less
+  else if a.init < b.init then Greater
+  else if a.dex > b.dex then Less
+  else if a.dex < b.dex then Greater
+  else compareTieHistory(a.tieHistory, b.tieHistory);
+}
+
+export function insertCombatant(c, sorted) {
+  if length(sorted) == 0 then [c]
+  else match compareCombatants(c, head(sorted)) with
+    | Less -> cons(c, sorted)
+    | Equal -> cons(c, sorted)
+    | Greater -> cons(head(sorted), insertCombatant(c, tail(sorted)));
+}
+
+export function sortCombatants(combatants) {
+  reduce(fn acc, c => insertCombatant(c, acc), [], combatants);
+}
+
+export function sameInitiativeTie(a, b) {
+  compareCombatants(a, b) == Equal;
+}
+
+export function findTieGroupSorted(sorted, current) {
+  if length(sorted) == 0 then {
+    length(current) > 1 ? TieGroup { current } : NoTieGroup;
+  } else if length(current) == 0 then
+    findTieGroupSorted(tail(sorted), [head(sorted)])
+  else if sameInitiativeTie(head(current), head(sorted)) then
+    findTieGroupSorted(tail(sorted), current + [head(sorted)])
+  else if length(current) > 1 then
+    TieGroup { current }
+  else
+    findTieGroupSorted(tail(sorted), [head(sorted)]);
+}
+
+export function findTieGroup(combatants) {
+  if length(combatants) < 2 then NoTieGroup
+  else findTieGroupSorted(sortCombatants(combatants), []);
+}

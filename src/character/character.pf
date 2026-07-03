@@ -1,0 +1,1309 @@
+// Character Forge domain: Pfun-native character model
+//
+// This intentionally does not mirror the TypeScript shape. It models the
+// game concepts with closed choices and pure derivations first.
+
+import * from "./abilities";
+import * from "../engine/currency";
+import * from "./traits";
+import * from "./feats";
+
+export type Species = {
+  | Aasimar
+  | Dragonborn
+  | Dwarf
+  | Elf
+  | Gnome
+  | Goliath
+  | Halfling
+  | Human
+  | Orc
+  | Tiefling
+}
+
+export type Class = {
+  | Barbarian
+  | Bard
+  | Cleric
+  | Druid
+  | Fighter
+  | Monk
+  | Paladin
+  | Ranger
+  | Rogue
+  | Sorcerer
+  | Warlock
+  | Wizard
+}
+
+export type Background = {
+  | Acolyte
+  | Artisan
+  | Charlatan
+  | Criminal
+  | Entertainer
+  | Farmer
+  | Guard
+  | Guide
+  | Hermit
+  | Merchant
+  | Noble
+  | Sage
+  | Sailor
+  | Scribe
+  | Soldier
+  | Wayfarer
+}
+
+export type Skill = {
+  | Athletics
+  | Acrobatics
+  | SleightOfHand
+  | Stealth
+  | Arcana
+  | History
+  | Investigation
+  | Nature
+  | Religion
+  | AnimalHandling
+  | Insight
+  | Medicine
+  | Perception
+  | Survival
+  | Deception
+  | Intimidation
+  | Performance
+  | Persuasion
+}
+
+export type Weapon = {
+  | Club
+  | Dagger
+  | Quarterstaff
+  | Shortsword
+  | Longsword
+  | Shortbow
+  | Longbow
+}
+
+export type Armor = {
+  | NoArmor
+  | PaddedArmor
+  | LeatherArmor
+  | StuddedLeatherArmor
+  | ChainShirt
+  | ScaleMail
+  | ChainMail
+}
+
+export type Tool = {
+  | ThievesTools
+  | HerbalismKit
+  | DisguiseKit
+  | PlayingCards
+}
+
+export type Gear = {
+  | ExplorerPack
+  | ScholarPack
+  | HolySymbol
+  | Spellbook
+  | Rope
+  | Torch
+}
+
+export type EquipmentLoadout = { weapons, armor, tools, gear, hasShield }
+
+export type Gender = {
+  | UnspecifiedGender
+  | MaleGender
+  | NonbinaryGender
+  | FemaleGender
+}
+
+export type DragonbornAncestry = {
+  | BlackDragonAncestry
+  | BlueDragonAncestry
+  | BrassDragonAncestry
+  | BronzeDragonAncestry
+  | CopperDragonAncestry
+  | GoldDragonAncestry
+  | GreenDragonAncestry
+  | RedDragonAncestry
+  | SilverDragonAncestry
+  | WhiteDragonAncestry
+}
+
+export type ElfLineage = {
+  | NoElfLineage
+  | DrowLineage
+  | HighElfLineage
+  | WoodElfLineage
+}
+
+export type GnomeLineage = {
+  | ForestGnomeLineage
+  | RockGnomeLineage
+}
+
+export type GoliathAncestry = {
+  | CloudGiantAncestry
+  | FireGiantAncestry
+  | FrostGiantAncestry
+  | HillGiantAncestry
+  | StoneGiantAncestry
+  | StormGiantAncestry
+}
+
+export type TieflingLineage = {
+  | AbyssalLineage
+  | ChthonicLineage
+  | InfernalLineage
+}
+
+export type SpeciesOptions = { dragonbornAncestry, elfLineage, elfBonusSkill, gnomeLineage, goliathAncestry, humanBonusSkill, humanBonusFeat, tieflingLineage, lineageSpellcastingAbility }
+
+export type FightingStyle = {
+  | NoFightingStyle
+  | ArcheryStyle
+  | DefenseStyle
+  | DuelingStyle
+  | GreatWeaponFightingStyle
+  | ProtectionStyle
+  | TwoWeaponFightingStyle
+}
+
+export type ClericOrder = {
+  | NoClericOrder
+  | ProtectorOrder
+  | ThaumaturgeOrder
+}
+
+export type DruidOrder = {
+  | NoDruidOrder
+  | MagicianOrder
+  | WardenOrder
+}
+
+export type ClassOptions = { classSkills, fightingStyle, clericOrder, druidOrder, expertiseSkillOne, expertiseSkillTwo }
+
+export type Identity = { name, playerName, gender }
+export type CharacterBuild = { identity, species, speciesOptions, class, classOptions, background, level, scores, loadout, copper }
+
+export type Condition = {
+  | Blinded
+  | Charmed
+  | Frightened
+  | Grappled
+  | Incapacitated
+  | Invisible
+  | Poisoned
+  | Prone
+  | Restrained
+  | Stunned
+  | Unconscious
+}
+
+export type CharacterState = { currentHp, temporaryHp, hitDiceSpent, conditions, notes }
+export type Character = { build, state }
+export type BonusTarget = {
+  | ArmorClassBonus
+  | InitiativeBonus
+  | PassivePerceptionBonus
+  | CarryingCapacityBonus
+  | StrengthBonus
+  | DexterityBonus
+  | ConstitutionBonus
+  | IntelligenceBonus
+  | WisdomBonus
+  | CharismaBonus
+  | AthleticsBonus
+  | AcrobaticsBonus
+  | SleightOfHandBonus
+  | StealthBonus
+  | ArcanaBonus
+  | HistoryBonus
+  | InvestigationBonus
+  | NatureBonus
+  | ReligionBonus
+  | AnimalHandlingBonus
+  | InsightBonus
+  | MedicineBonus
+  | PerceptionBonus
+  | SurvivalBonus
+  | DeceptionBonus
+  | IntimidationBonus
+  | PerformanceBonus
+  | PersuasionBonus
+}
+
+export type RuleBonus = { target, amount, source }
+export type CharacterRules = { savingThrows, skillProficiencies, toolProficiencies, armorProficiencies, weaponProficiencies, speciesTraits, classFeatures, backgroundTraits, feats, features, bonuses }
+export type DerivedStats = { proficiencyBonus, armorClass, initiativeMod, hitPointMax, passivePerception, carryingCapacity }
+export type PlayStats = { currentHp, temporaryHp, hitDiceRemaining, isConscious }
+
+
+export function genderName(gender) {
+  match gender with
+  | UnspecifiedGender -> "Any"
+  | MaleGender -> "Male"
+  | NonbinaryGender -> "Non-binary"
+  | FemaleGender -> "Female";
+}
+
+export function genderId(gender) {
+  match gender with
+  | UnspecifiedGender -> "any"
+  | MaleGender -> "male"
+  | NonbinaryGender -> "nonbinary"
+  | FemaleGender -> "female";
+}
+
+export function genderFromId(id) {
+  if id == "male" then
+    MaleGender
+  else if id == "nonbinary" then
+    NonbinaryGender
+  else if id == "female" then
+    FemaleGender
+  else
+    UnspecifiedGender;
+}
+
+export function dragonbornAncestryName(ancestry) {
+  match ancestry with
+  | BlackDragonAncestry -> "Black"
+  | BlueDragonAncestry -> "Blue"
+  | BrassDragonAncestry -> "Brass"
+  | BronzeDragonAncestry -> "Bronze"
+  | CopperDragonAncestry -> "Copper"
+  | GoldDragonAncestry -> "Gold"
+  | GreenDragonAncestry -> "Green"
+  | RedDragonAncestry -> "Red"
+  | SilverDragonAncestry -> "Silver"
+  | WhiteDragonAncestry -> "White";
+}
+
+export function dragonbornAncestryId(ancestry) {
+  match ancestry with
+  | BlackDragonAncestry -> "black"
+  | BlueDragonAncestry -> "blue"
+  | BrassDragonAncestry -> "brass"
+  | BronzeDragonAncestry -> "bronze"
+  | CopperDragonAncestry -> "copper"
+  | GoldDragonAncestry -> "gold"
+  | GreenDragonAncestry -> "green"
+  | RedDragonAncestry -> "red"
+  | SilverDragonAncestry -> "silver"
+  | WhiteDragonAncestry -> "white";
+}
+
+export function dragonbornAncestryFromId(id) {
+  if id == "black" then BlackDragonAncestry
+  else if id == "blue" then BlueDragonAncestry
+  else if id == "brass" then BrassDragonAncestry
+  else if id == "bronze" then BronzeDragonAncestry
+  else if id == "copper" then CopperDragonAncestry
+  else if id == "gold" then GoldDragonAncestry
+  else if id == "green" then GreenDragonAncestry
+  else if id == "red" then RedDragonAncestry
+  else if id == "silver" then SilverDragonAncestry
+  else if id == "white" then WhiteDragonAncestry
+  else RedDragonAncestry;
+}
+
+export function dragonbornAncestryDamage(ancestry) {
+  match ancestry with
+  | BlackDragonAncestry -> "Acid"
+  | BlueDragonAncestry -> "Lightning"
+  | BrassDragonAncestry -> "Fire"
+  | BronzeDragonAncestry -> "Lightning"
+  | CopperDragonAncestry -> "Acid"
+  | GoldDragonAncestry -> "Fire"
+  | GreenDragonAncestry -> "Poison"
+  | RedDragonAncestry -> "Fire"
+  | SilverDragonAncestry -> "Cold"
+  | WhiteDragonAncestry -> "Cold";
+}
+
+
+export function elfLineageName(lineage) {
+  match lineage with
+  | NoElfLineage -> "None"
+  | DrowLineage -> "Drow"
+  | HighElfLineage -> "High Elf"
+  | WoodElfLineage -> "Wood Elf";
+}
+
+export function elfLineageId(lineage) {
+  match lineage with
+  | NoElfLineage -> "none"
+  | DrowLineage -> "drow"
+  | HighElfLineage -> "high"
+  | WoodElfLineage -> "wood";
+}
+
+export function elfLineageFromId(id) {
+  if id == "drow" then
+    DrowLineage
+  else if id == "high" then
+    HighElfLineage
+  else if id == "wood" then
+    WoodElfLineage
+  else
+    NoElfLineage;
+}
+
+export function gnomeLineageName(lineage) {
+  match lineage with
+  | ForestGnomeLineage -> "Forest Gnome"
+  | RockGnomeLineage -> "Rock Gnome";
+}
+
+export function gnomeLineageId(lineage) {
+  match lineage with
+  | ForestGnomeLineage -> "forest"
+  | RockGnomeLineage -> "rock";
+}
+
+export function gnomeLineageFromId(id) {
+  if id == "rock" then RockGnomeLineage else ForestGnomeLineage;
+}
+
+export function goliathAncestryName(ancestry) {
+  match ancestry with
+  | CloudGiantAncestry -> "Cloud Giant"
+  | FireGiantAncestry -> "Fire Giant"
+  | FrostGiantAncestry -> "Frost Giant"
+  | HillGiantAncestry -> "Hill Giant"
+  | StoneGiantAncestry -> "Stone Giant"
+  | StormGiantAncestry -> "Storm Giant";
+}
+
+export function goliathAncestryId(ancestry) {
+  match ancestry with
+  | CloudGiantAncestry -> "cloud"
+  | FireGiantAncestry -> "fire"
+  | FrostGiantAncestry -> "frost"
+  | HillGiantAncestry -> "hill"
+  | StoneGiantAncestry -> "stone"
+  | StormGiantAncestry -> "storm";
+}
+
+export function goliathAncestryFromId(id) {
+  if id == "cloud" then CloudGiantAncestry
+  else if id == "fire" then FireGiantAncestry
+  else if id == "frost" then FrostGiantAncestry
+  else if id == "hill" then HillGiantAncestry
+  else if id == "stone" then StoneGiantAncestry
+  else if id == "storm" then StormGiantAncestry
+  else CloudGiantAncestry;
+}
+
+export function tieflingLineageName(lineage) {
+  match lineage with
+  | AbyssalLineage -> "Abyssal"
+  | ChthonicLineage -> "Chthonic"
+  | InfernalLineage -> "Infernal";
+}
+
+export function tieflingLineageId(lineage) {
+  match lineage with
+  | AbyssalLineage -> "abyssal"
+  | ChthonicLineage -> "chthonic"
+  | InfernalLineage -> "infernal";
+}
+
+export function tieflingLineageFromId(id) {
+  if id == "abyssal" then AbyssalLineage
+  else if id == "chthonic" then ChthonicLineage
+  else if id == "infernal" then InfernalLineage
+  else InfernalLineage;
+}
+
+export function tieflingLineageResistance(lineage) {
+  match lineage with
+  | AbyssalLineage -> "Poison"
+  | ChthonicLineage -> "Necrotic"
+  | InfernalLineage -> "Fire";
+}
+
+export function abilitySpellcastingName(id) {
+  if id == "int" then "Intelligence"
+  else if id == "wis" then "Wisdom"
+  else if id == "cha" then "Charisma"
+  else "Intelligence";
+}
+
+export function skillFromId(id, fallback) {
+  if id == "athletics" then Athletics
+  else if id == "acrobatics" then Acrobatics
+  else if id == "sleight-of-hand" then SleightOfHand
+  else if id == "stealth" then Stealth
+  else if id == "arcana" then Arcana
+  else if id == "history" then History
+  else if id == "investigation" then Investigation
+  else if id == "nature" then Nature
+  else if id == "religion" then Religion
+  else if id == "animal-handling" then AnimalHandling
+  else if id == "insight" then Insight
+  else if id == "medicine" then Medicine
+  else if id == "perception" then Perception
+  else if id == "survival" then Survival
+  else if id == "deception" then Deception
+  else if id == "intimidation" then Intimidation
+  else if id == "performance" then Performance
+  else if id == "persuasion" then Persuasion
+  else fallback;
+}
+
+export function skillId(skill) {
+  match skill with
+  | Insight -> "insight"
+  | Perception -> "perception"
+  | Survival -> "survival"
+  | Athletics -> "athletics"
+  | Acrobatics -> "acrobatics"
+  | SleightOfHand -> "sleight-of-hand"
+  | Stealth -> "stealth"
+  | Arcana -> "arcana"
+  | History -> "history"
+  | Investigation -> "investigation"
+  | Nature -> "nature"
+  | Religion -> "religion"
+  | AnimalHandling -> "animal-handling"
+  | Medicine -> "medicine"
+  | Deception -> "deception"
+  | Intimidation -> "intimidation"
+  | Performance -> "performance"
+  | Persuasion -> "persuasion";
+}
+
+export function fightingStyleName(style) {
+  match style with
+  | NoFightingStyle -> "None"
+  | ArcheryStyle -> "Archery"
+  | DefenseStyle -> "Defense"
+  | DuelingStyle -> "Dueling"
+  | GreatWeaponFightingStyle -> "Great Weapon Fighting"
+  | ProtectionStyle -> "Protection"
+  | TwoWeaponFightingStyle -> "Two-Weapon Fighting";
+}
+
+export function fightingStyleId(style) {
+  match style with
+  | NoFightingStyle -> "none"
+  | ArcheryStyle -> "archery"
+  | DefenseStyle -> "defense"
+  | DuelingStyle -> "dueling"
+  | GreatWeaponFightingStyle -> "great-weapon"
+  | ProtectionStyle -> "protection"
+  | TwoWeaponFightingStyle -> "two-weapon";
+}
+
+export function fightingStyleFromId(id) {
+  if id == "archery" then ArcheryStyle
+  else if id == "defense" then DefenseStyle
+  else if id == "dueling" then DuelingStyle
+  else if id == "great-weapon" then GreatWeaponFightingStyle
+  else if id == "protection" then ProtectionStyle
+  else if id == "two-weapon" then TwoWeaponFightingStyle
+  else NoFightingStyle;
+}
+
+export function clericOrderName(order) {
+  match order with
+  | NoClericOrder -> "None"
+  | ProtectorOrder -> "Protector"
+  | ThaumaturgeOrder -> "Thaumaturge";
+}
+
+export function clericOrderId(order) {
+  match order with
+  | NoClericOrder -> "none"
+  | ProtectorOrder -> "protector"
+  | ThaumaturgeOrder -> "thaumaturge";
+}
+
+export function clericOrderFromId(id) {
+  if id == "protector" then ProtectorOrder
+  else if id == "thaumaturge" then ThaumaturgeOrder
+  else NoClericOrder;
+}
+
+export function druidOrderName(order) {
+  match order with
+  | NoDruidOrder -> "None"
+  | MagicianOrder -> "Magician"
+  | WardenOrder -> "Warden";
+}
+
+export function druidOrderId(order) {
+  match order with
+  | NoDruidOrder -> "none"
+  | MagicianOrder -> "magician"
+  | WardenOrder -> "warden";
+}
+
+export function druidOrderFromId(id) {
+  if id == "magician" then MagicianOrder
+  else if id == "warden" then WardenOrder
+  else NoDruidOrder;
+}
+
+export function allSkills() {
+  [Athletics, Acrobatics, SleightOfHand, Stealth, Arcana, History, Investigation, Nature, Religion, AnimalHandling, Insight, Medicine, Perception, Survival, Deception, Intimidation, Performance, Persuasion];
+}
+
+export function classSkillOptions(class) {
+  match class with
+  | Barbarian -> [AnimalHandling, Athletics, Intimidation, Nature, Perception, Survival]
+  | Bard -> allSkills()
+  | Cleric -> [History, Insight, Medicine, Persuasion, Religion]
+  | Druid -> [Arcana, AnimalHandling, Insight, Medicine, Nature, Perception, Religion, Survival]
+  | Fighter -> [Acrobatics, AnimalHandling, Athletics, History, Insight, Intimidation, Perception, Survival]
+  | Monk -> [Acrobatics, Athletics, History, Insight, Religion, Stealth]
+  | Paladin -> [Athletics, Insight, Intimidation, Medicine, Persuasion, Religion]
+  | Ranger -> [AnimalHandling, Athletics, Insight, Investigation, Nature, Perception, Stealth, Survival]
+  | Rogue -> [Acrobatics, Athletics, Deception, Insight, Intimidation, Investigation, Perception, Persuasion, SleightOfHand, Stealth]
+  | Sorcerer -> [Arcana, Deception, Insight, Intimidation, Persuasion, Religion]
+  | Warlock -> [Arcana, Deception, History, Intimidation, Investigation, Nature, Religion]
+  | Wizard -> [Arcana, History, Insight, Investigation, Medicine, Religion];
+}
+
+export function classSkillChoiceCount(class) {
+  match class with
+  | Bard -> 3
+  | Ranger -> 3
+  | Rogue -> 4
+  | Barbarian -> 2
+  | Cleric -> 2
+  | Druid -> 2
+  | Fighter -> 2
+  | Monk -> 2
+  | Paladin -> 2
+  | Sorcerer -> 2
+  | Warlock -> 2
+  | Wizard -> 2;
+}
+
+export function defaultClassSkills(class) {
+  take(classSkillChoiceCount(class), classSkillOptions(class));
+}
+
+export function defaultFightingStyle(class) {
+  if className(class) == "Fighter" then DefenseStyle else NoFightingStyle;
+}
+
+export function defaultClericOrder(class) {
+  if className(class) == "Cleric" then ThaumaturgeOrder else NoClericOrder;
+}
+
+export function defaultDruidOrder(class) {
+  if className(class) == "Druid" then WardenOrder else NoDruidOrder;
+}
+
+export function defaultClassOptions(class) {
+  let skills = defaultClassSkills(class);
+  ClassOptions(
+    classSkills = skills,
+    fightingStyle = defaultFightingStyle(class),
+    clericOrder = defaultClericOrder(class),
+    druidOrder = defaultDruidOrder(class),
+    expertiseSkillOne = head(skills),
+    expertiseSkillTwo = head(tail(skills))
+  );
+}
+
+export function hasFightingStyleOption(class) {
+  let name = className(class);
+  name == "Fighter" || name == "Paladin" || name == "Ranger";
+}
+
+export function hasClericOrderOption(class) {
+  className(class) == "Cleric";
+}
+
+export function hasDruidOrderOption(class) {
+  className(class) == "Druid";
+}
+
+export function hasExpertiseOption(class) {
+  let name = className(class);
+  name == "Rogue" || name == "Bard";
+}
+
+export function classOptionsLine(class, options) {
+  let skills = join([skillName(s) for s <- options.classSkills], ", ");
+  let style = hasFightingStyleOption(class) ? ("; Fighting Style: " + fightingStyleName(options.fightingStyle)) : "";
+  let cleric = hasClericOrderOption(class) ? ("; Divine Order: " + clericOrderName(options.clericOrder)) : "";
+  let druid = hasDruidOrderOption(class) ? ("; Primal Order: " + druidOrderName(options.druidOrder)) : "";
+  let expertise = hasExpertiseOption(class) ? ("; Expertise: " + skillName(options.expertiseSkillOne) + ", " + skillName(options.expertiseSkillTwo)) : "";
+  "Skills: " + skills + style + cleric + druid + expertise;
+}
+
+
+export function defaultSpeciesOptions(species) {
+  if speciesName(species) == "Dragonborn" then
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = NoElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "cha")
+  else if speciesName(species) == "Elf" then
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = HighElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "int")
+  else if speciesName(species) == "Gnome" then
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = NoElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "int")
+  else if speciesName(species) == "Goliath" then
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = NoElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "cha")
+  else if speciesName(species) == "Human" then
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = NoElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "cha")
+  else if speciesName(species) == "Tiefling" then
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = NoElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "cha")
+  else
+    SpeciesOptions(dragonbornAncestry = RedDragonAncestry, elfLineage = NoElfLineage, elfBonusSkill = Perception, gnomeLineage = ForestGnomeLineage, goliathAncestry = CloudGiantAncestry, humanBonusSkill = Perception, humanBonusFeat = "skilled", tieflingLineage = InfernalLineage, lineageSpellcastingAbility = "cha");
+}
+
+export function speciesOptionsLine(species, options) {
+  if speciesName(species) == "Dragonborn" then
+    "Draconic Ancestry: " + dragonbornAncestryName(options.dragonbornAncestry)
+  else if speciesName(species) == "Elf" then
+    "Lineage: " + elfLineageName(options.elfLineage) + "; Skill: " + skillName(options.elfBonusSkill)
+  else if speciesName(species) == "Gnome" then
+    "Lineage: " + gnomeLineageName(options.gnomeLineage)
+  else if speciesName(species) == "Goliath" then
+    "Giant Ancestry: " + goliathAncestryName(options.goliathAncestry)
+  else if speciesName(species) == "Human" then
+    "Skill: " + skillName(options.humanBonusSkill) + "; Feat: " + options.humanBonusFeat
+  else if speciesName(species) == "Tiefling" then
+    "Legacy: " + tieflingLineageName(options.tieflingLineage)
+  else
+    "No species options";
+}
+
+export function speciesName(species) {
+  match species with
+  | Aasimar -> "Aasimar"
+  | Dragonborn -> "Dragonborn"
+  | Dwarf -> "Dwarf"
+  | Elf -> "Elf"
+  | Gnome -> "Gnome"
+  | Goliath -> "Goliath"
+  | Halfling -> "Halfling"
+  | Human -> "Human"
+  | Orc -> "Orc"
+  | Tiefling -> "Tiefling";
+}
+
+export function className(class) {
+  match class with
+  | Barbarian -> "Barbarian"
+  | Bard -> "Bard"
+  | Cleric -> "Cleric"
+  | Druid -> "Druid"
+  | Fighter -> "Fighter"
+  | Monk -> "Monk"
+  | Paladin -> "Paladin"
+  | Ranger -> "Ranger"
+  | Rogue -> "Rogue"
+  | Sorcerer -> "Sorcerer"
+  | Warlock -> "Warlock"
+  | Wizard -> "Wizard";
+}
+
+export function backgroundName(background) {
+  match background with
+  | Acolyte -> "Acolyte"
+  | Artisan -> "Artisan"
+  | Charlatan -> "Charlatan"
+  | Criminal -> "Criminal"
+  | Entertainer -> "Entertainer"
+  | Farmer -> "Farmer"
+  | Guard -> "Guard"
+  | Guide -> "Guide"
+  | Hermit -> "Hermit"
+  | Merchant -> "Merchant"
+  | Noble -> "Noble"
+  | Sage -> "Sage"
+  | Sailor -> "Sailor"
+  | Scribe -> "Scribe"
+  | Soldier -> "Soldier"
+  | Wayfarer -> "Wayfarer";
+}
+
+export function skillName(skill) {
+  match skill with
+  | Athletics -> "Athletics"
+  | Acrobatics -> "Acrobatics"
+  | SleightOfHand -> "Sleight of Hand"
+  | Stealth -> "Stealth"
+  | Arcana -> "Arcana"
+  | History -> "History"
+  | Investigation -> "Investigation"
+  | Nature -> "Nature"
+  | Religion -> "Religion"
+  | AnimalHandling -> "Animal Handling"
+  | Insight -> "Insight"
+  | Medicine -> "Medicine"
+  | Perception -> "Perception"
+  | Survival -> "Survival"
+  | Deception -> "Deception"
+  | Intimidation -> "Intimidation"
+  | Performance -> "Performance"
+  | Persuasion -> "Persuasion";
+}
+
+export function weaponName(weapon) {
+  match weapon with
+  | Club -> "Club"
+  | Dagger -> "Dagger"
+  | Quarterstaff -> "Quarterstaff"
+  | Shortsword -> "Shortsword"
+  | Longsword -> "Longsword"
+  | Shortbow -> "Shortbow"
+  | Longbow -> "Longbow";
+}
+
+export function armorName(armor) {
+  match armor with
+  | NoArmor -> "No armor"
+  | PaddedArmor -> "Padded armor"
+  | LeatherArmor -> "Leather armor"
+  | StuddedLeatherArmor -> "Studded leather armor"
+  | ChainShirt -> "Chain shirt"
+  | ScaleMail -> "Scale mail"
+  | ChainMail -> "Chain mail";
+}
+
+export function toolName(tool) {
+  match tool with
+  | ThievesTools -> "Thieves' tools"
+  | HerbalismKit -> "Herbalism kit"
+  | DisguiseKit -> "Disguise kit"
+  | PlayingCards -> "Playing cards";
+}
+
+export function gearName(gear) {
+  match gear with
+  | ExplorerPack -> "Explorer's pack"
+  | ScholarPack -> "Scholar's pack"
+  | HolySymbol -> "Holy symbol"
+  | Spellbook -> "Spellbook"
+  | Rope -> "Rope"
+  | Torch -> "Torch";
+}
+
+export function equipmentNames(loadout) {
+  let weaponNames = [ weaponName(w) for w <- loadout.weapons ];
+  let armorNames = [ armorName(a) for a <- loadout.armor ];
+  let toolNames = [ toolName(t) for t <- loadout.tools ];
+  let gearNames = [ gearName(g) for g <- loadout.gear ];
+  let shieldNames = loadout.hasShield ? ["Shield"] : [];
+  weaponNames + armorNames + toolNames + gearNames + shieldNames;
+}
+
+export function weaponAbility(weapon) {
+  match weapon with
+  | Dagger -> Dexterity
+  | Shortsword -> Dexterity
+  | Shortbow -> Dexterity
+  | Longbow -> Dexterity
+  | Club -> Strength
+  | Quarterstaff -> Strength
+  | Longsword -> Strength;
+}
+
+export function weaponDamage(weapon) {
+  match weapon with
+  | Club -> "1d4"
+  | Dagger -> "1d4"
+  | Quarterstaff -> "1d6"
+  | Shortsword -> "1d6"
+  | Longsword -> "1d8"
+  | Shortbow -> "1d6"
+  | Longbow -> "1d8";
+}
+
+export function armorBaseAc(armor) {
+  match armor with
+  | NoArmor -> 10
+  | PaddedArmor -> 11
+  | LeatherArmor -> 11
+  | StuddedLeatherArmor -> 12
+  | ChainShirt -> 13
+  | ScaleMail -> 14
+  | ChainMail -> 16;
+}
+
+export function armorDexLimit(armor) {
+  match armor with
+  | NoArmor -> 99
+  | PaddedArmor -> 99
+  | LeatherArmor -> 99
+  | StuddedLeatherArmor -> 99
+  | ChainShirt -> 2
+  | ScaleMail -> 2
+  | ChainMail -> 0;
+}
+
+export function minInt(a, b) {
+  a < b ? a : b;
+}
+
+export function hitDie(class) {
+  match class with
+  | Barbarian -> 12
+  | Bard -> 8
+  | Cleric -> 8
+  | Druid -> 8
+  | Fighter -> 10
+  | Monk -> 8
+  | Paladin -> 10
+  | Ranger -> 10
+  | Rogue -> 8
+  | Sorcerer -> 6
+  | Warlock -> 8
+  | Wizard -> 6;
+}
+
+export function proficiencyBonusForLevel(level) {
+  2 + ((level - 1) / 4);
+}
+
+export function hasArmor(armor, armors) {
+  length(filter(fn item => item == armor, armors)) > 0;
+}
+
+
+export function abilityBonusTarget(ability) {
+  match ability with
+  | Strength -> StrengthBonus
+  | Dexterity -> DexterityBonus
+  | Constitution -> ConstitutionBonus
+  | Intelligence -> IntelligenceBonus
+  | Wisdom -> WisdomBonus
+  | Charisma -> CharismaBonus;
+}
+
+export function skillBonusTarget(skill) {
+  match skill with
+  | Athletics -> AthleticsBonus
+  | Acrobatics -> AcrobaticsBonus
+  | SleightOfHand -> SleightOfHandBonus
+  | Stealth -> StealthBonus
+  | Arcana -> ArcanaBonus
+  | History -> HistoryBonus
+  | Investigation -> InvestigationBonus
+  | Nature -> NatureBonus
+  | Religion -> ReligionBonus
+  | AnimalHandling -> AnimalHandlingBonus
+  | Insight -> InsightBonus
+  | Medicine -> MedicineBonus
+  | Perception -> PerceptionBonus
+  | Survival -> SurvivalBonus
+  | Deception -> DeceptionBonus
+  | Intimidation -> IntimidationBonus
+  | Performance -> PerformanceBonus
+  | Persuasion -> PersuasionBonus;
+}
+
+export function bonusTargetName(target) {
+  match target with
+  | ArmorClassBonus -> "Armor Class"
+  | InitiativeBonus -> "Initiative"
+  | PassivePerceptionBonus -> "Passive Perception"
+  | CarryingCapacityBonus -> "Carrying Capacity"
+  | StrengthBonus -> "Strength"
+  | DexterityBonus -> "Dexterity"
+  | ConstitutionBonus -> "Constitution"
+  | IntelligenceBonus -> "Intelligence"
+  | WisdomBonus -> "Wisdom"
+  | CharismaBonus -> "Charisma"
+  | AthleticsBonus -> "Athletics"
+  | AcrobaticsBonus -> "Acrobatics"
+  | SleightOfHandBonus -> "Sleight of Hand"
+  | StealthBonus -> "Stealth"
+  | ArcanaBonus -> "Arcana"
+  | HistoryBonus -> "History"
+  | InvestigationBonus -> "Investigation"
+  | NatureBonus -> "Nature"
+  | ReligionBonus -> "Religion"
+  | AnimalHandlingBonus -> "Animal Handling"
+  | InsightBonus -> "Insight"
+  | MedicineBonus -> "Medicine"
+  | PerceptionBonus -> "Perception"
+  | SurvivalBonus -> "Survival"
+  | DeceptionBonus -> "Deception"
+  | IntimidationBonus -> "Intimidation"
+  | PerformanceBonus -> "Performance"
+  | PersuasionBonus -> "Persuasion";
+}
+
+export function bonusesForTarget(rules, target) {
+  filter(fn b => b.target == target, rules.bonuses);
+}
+
+export function sumBonusList(bonuses) {
+  reduce(fn acc, b => acc + b.amount, 0, bonuses);
+}
+
+export function ruleBonus(rules, target) {
+  sumBonusList(bonusesForTarget(rules, target));
+}
+
+export function abilityRuleBonus(rules, ability) {
+  ruleBonus(rules, abilityBonusTarget(ability));
+}
+
+export function skillRuleBonus(rules, skill) {
+  ruleBonus(rules, skillBonusTarget(skill));
+}
+
+export function equippedArmor(character) {
+  let build = character.build;
+  let armors = build.loadout.armor;
+  if hasArmor(ChainMail, armors) then
+    ChainMail
+  else if hasArmor(ScaleMail, armors) then
+    ScaleMail
+  else if hasArmor(ChainShirt, armors) then
+    ChainShirt
+  else if hasArmor(StuddedLeatherArmor, armors) then
+    StuddedLeatherArmor
+  else if hasArmor(LeatherArmor, armors) then
+    LeatherArmor
+  else if hasArmor(PaddedArmor, armors) then
+    PaddedArmor
+  else
+    NoArmor;
+}
+
+export function armorClass(character, rules) {
+  let build = character.build;
+  let armor = equippedArmor(character);
+  let dex = abilityMod(getScore(build.scores, Dexterity) + abilityRuleBonus(rules, Dexterity));
+  let dexPart = minInt(dex, armorDexLimit(armor));
+  let shieldPart = build.loadout.hasShield ? 2 : 0;
+  armorBaseAc(armor) + dexPart + shieldPart + ruleBonus(rules, ArmorClassBonus);
+}
+
+export function initiativeMod(character, rules) {
+  let build = character.build;
+  abilityMod(getScore(build.scores, Dexterity) + abilityRuleBonus(rules, Dexterity)) + ruleBonus(rules, InitiativeBonus);
+}
+
+export function hitPointMax(character) {
+  let build = character.build;
+  let con = abilityMod(getScore(build.scores, Constitution));
+  hitDie(build.class) + con + ((build.level - 1) * ((hitDie(build.class) / 2) + 1 + con));
+}
+
+export function carryingCapacity(character, rules) {
+  let build = character.build;
+  (getScore(build.scores, Strength) + abilityRuleBonus(rules, Strength)) * 15 + ruleBonus(rules, CarryingCapacityBonus);
+}
+
+export function hasSkill(skill, skills) {
+  length(filter(fn s => s == skill, skills)) > 0;
+}
+
+export function skillAbility(skill) {
+  match skill with
+  | Athletics -> Strength
+  | Acrobatics -> Dexterity
+  | SleightOfHand -> Dexterity
+  | Stealth -> Dexterity
+  | Arcana -> Intelligence
+  | History -> Intelligence
+  | Investigation -> Intelligence
+  | Nature -> Intelligence
+  | Religion -> Intelligence
+  | AnimalHandling -> Wisdom
+  | Insight -> Wisdom
+  | Medicine -> Wisdom
+  | Perception -> Wisdom
+  | Survival -> Wisdom
+  | Deception -> Charisma
+  | Intimidation -> Charisma
+  | Performance -> Charisma
+  | Persuasion -> Charisma;
+}
+
+export function skillBonus(character, rules, skill) {
+  let build = character.build;
+  let ability = skillAbility(skill);
+  let abilityScore = getScore(build.scores, ability) + abilityRuleBonus(rules, ability);
+  let base = abilityMod(abilityScore);
+  let prof = hasSkill(skill, rules.skillProficiencies) ? proficiencyBonusForLevel(build.level) : 0;
+  base + prof + skillRuleBonus(rules, skill);
+}
+
+export function passivePerception(character, rules) {
+  10 + skillBonus(character, rules, Perception) + ruleBonus(rules, PassivePerceptionBonus);
+}
+
+
+export function hasWeapon(weapon, weapons) {
+  length(filter(fn w => w == weapon, weapons)) > 0;
+}
+
+export function weaponAttackBonus(character, rules, weapon) {
+  let build = character.build;
+  let ability = weaponAbility(weapon);
+  let prof = hasWeapon(weapon, rules.weaponProficiencies) ? proficiencyBonusForLevel(build.level) : 0;
+  abilityMod(getScore(build.scores, ability) + abilityRuleBonus(rules, ability)) + prof;
+}
+
+export function weaponDamageBonus(character, weapon) {
+  let build = character.build;
+  let ability = weaponAbility(weapon);
+  abilityMod(getScore(build.scores, ability));
+}
+
+export function weaponLine(character, rules, weapon) {
+  let name = weaponName(weapon);
+  let damage = weaponDamage(weapon);
+  let attack = weaponAttackBonus(character, rules, weapon);
+  let damageBonus = weaponDamageBonus(character, weapon);
+  let attackText = formatMod(attack);
+  let damageText = formatMod(damageBonus);
+  $"{name}: attack {attackText}, damage {damage}{damageText}";
+}
+
+export function derive(character, rules) {
+  DerivedStats(
+    proficiencyBonus = proficiencyBonusForLevel(character.build.level),
+    armorClass = armorClass(character, rules),
+    initiativeMod = initiativeMod(character, rules),
+    hitPointMax = hitPointMax(character),
+    passivePerception = passivePerception(character, rules),
+    carryingCapacity = carryingCapacity(character, rules)
+  );
+}
+
+export function summaryLine(character) {
+  let build = character.build;
+  let name = build.identity.name;
+  let level = build.level;
+  let speciesText = speciesName(build.species);
+  let classText = className(build.class);
+  let backgroundText = backgroundName(build.background);
+  let money = formatCurrency(build.copper);
+  $"{name}: level {level} {speciesText} {classText}, {backgroundText}, {money}";
+}
+
+export function hasCondition(condition, conditions) {
+  length(filter(fn c => c == condition, conditions)) > 0;
+}
+
+export function isConscious(character) {
+  character.state.currentHp > 0 && !hasCondition(Unconscious, character.state.conditions);
+}
+
+export function maxInt(a, b) {
+  a > b ? a : b;
+}
+
+export function hitDiceRemaining(character) {
+  maxInt(0, character.build.level - character.state.hitDiceSpent);
+}
+
+export function playStats(character) {
+  PlayStats(
+    currentHp = character.state.currentHp,
+    temporaryHp = character.state.temporaryHp,
+    hitDiceRemaining = hitDiceRemaining(character),
+    isConscious = isConscious(character)
+  );
+}
+
+export function sampleCharacterBuild() {
+  CharacterBuild(
+    identity = Identity(name = "Tessa", playerName = "Player", gender = FemaleGender),
+    species = Elf,
+    speciesOptions = defaultSpeciesOptions(Elf),
+    class = Rogue,
+    classOptions = defaultClassOptions(Rogue),
+    background = Criminal,
+    level = 3,
+    scores = AbilityScores(
+      strength = 10,
+      dexterity = 16,
+      constitution = 14,
+      intelligence = 13,
+      wisdom = 12,
+      charisma = 8
+    ),
+    loadout = EquipmentLoadout(
+      weapons = [Shortsword, Dagger],
+      armor = [LeatherArmor],
+      tools = [ThievesTools],
+      gear = [ExplorerPack],
+      hasShield = false
+    ),
+    copper = 1234
+  );
+}
+
+export function sampleCharacterState() {
+  CharacterState(
+    currentHp = 18,
+    temporaryHp = 0,
+    hitDiceSpent = 1,
+    conditions = [],
+    notes = ""
+  );
+}
+
+export function sampleCharacter() {
+  Character(
+    build = sampleCharacterBuild(),
+    state = sampleCharacterState()
+  );
+}
+
+// Computed projection for UI/persistence boundaries.
+// This is deliberately not stored. Recompute it from CharacterBuild + CharacterState.
+export type SkillBonusView = { skill, name, bonus }
+export type RuleBonusView = { target, targetName, amount, source, line }
+export type WeaponView = { weapon, name, attackBonus, damageDie, damageBonus, line }
+export type CharacterView = {
+  name,
+  playerName,
+  gender,
+  level,
+  speciesName,
+  className,
+  backgroundName,
+  currencyText,
+  proficiencyBonus,
+  armorClass,
+  initiativeMod,
+  hitPointMax,
+  currentHp,
+  temporaryHp,
+  hitDiceRemaining,
+  isConscious,
+  passivePerception,
+  carryingCapacity,
+  savingThrows,
+  backgroundSkills,
+  backgroundTools,
+  skillBonuses,
+  equippedArmor,
+  equipment,
+  weapons,
+  traits,
+  feats,
+  bonuses,
+  notes
+}
+
+export function skillBonusView(character, rules, skill) {
+  SkillBonusView(
+    skill = skill,
+    name = skillName(skill),
+    bonus = skillBonus(character, rules, skill)
+  );
+}
+
+export function allSkillBonuses(character, rules) {
+  [
+    skillBonusView(character, rules, Athletics),
+    skillBonusView(character, rules, Acrobatics),
+    skillBonusView(character, rules, SleightOfHand),
+    skillBonusView(character, rules, Stealth),
+    skillBonusView(character, rules, Arcana),
+    skillBonusView(character, rules, History),
+    skillBonusView(character, rules, Investigation),
+    skillBonusView(character, rules, Nature),
+    skillBonusView(character, rules, Religion),
+    skillBonusView(character, rules, AnimalHandling),
+    skillBonusView(character, rules, Insight),
+    skillBonusView(character, rules, Medicine),
+    skillBonusView(character, rules, Perception),
+    skillBonusView(character, rules, Survival),
+    skillBonusView(character, rules, Deception),
+    skillBonusView(character, rules, Intimidation),
+    skillBonusView(character, rules, Performance),
+    skillBonusView(character, rules, Persuasion)
+  ];
+}
+
+export function weaponView(character, rules, weapon) {
+  WeaponView(
+    weapon = weapon,
+    name = weaponName(weapon),
+    attackBonus = weaponAttackBonus(character, rules, weapon),
+    damageDie = weaponDamage(weapon),
+    damageBonus = weaponDamageBonus(character, weapon),
+    line = weaponLine(character, rules, weapon)
+  );
+}
+
+export function equippedWeaponViews(character, rules) {
+  [ weaponView(character, rules, w) for w <- character.build.loadout.weapons ];
+}
+
+
+export function ruleBonusView(bonus) {
+  let targetName = bonusTargetName(bonus.target);
+  let amountText = formatMod(bonus.amount);
+  let source = bonus.source;
+  RuleBonusView(
+    target = bonus.target,
+    targetName = targetName,
+    amount = bonus.amount,
+    source = source,
+    line = $"{targetName} {amountText} from {source}"
+  );
+}
+
+export function ruleBonusViews(rules) {
+  [ ruleBonusView(b) for b <- rules.bonuses ];
+}
+
+
+export function projectedTraitViews(character, rules) {
+  let build = character.build;
+  speciesTraitViews(speciesName(build.species), rules.speciesTraits) + classTraitViews(className(build.class), rules.classFeatures) + backgroundTraitViews(backgroundName(build.background), rules.backgroundTraits) + featTraitViews(rules.feats);
+}
+
+export function projectedFeatViews(rules) {
+  featViews(rules.feats);
+}
+
+export function projectCharacterWithRules(character, rules) {
+  let build = character.build;
+  let state = character.state;
+  let derived = derive(character, rules);
+  let play = playStats(character);
+  let armor = equippedArmor(character);
+  CharacterView(
+    name = build.identity.name,
+    playerName = build.identity.playerName,
+    gender = build.identity.gender,
+    level = build.level,
+    speciesName = speciesName(build.species),
+    className = className(build.class),
+    backgroundName = backgroundName(build.background),
+    currencyText = formatCurrency(build.copper),
+    proficiencyBonus = derived.proficiencyBonus,
+    armorClass = derived.armorClass,
+    initiativeMod = derived.initiativeMod,
+    hitPointMax = derived.hitPointMax,
+    currentHp = play.currentHp,
+    temporaryHp = play.temporaryHp,
+    hitDiceRemaining = play.hitDiceRemaining,
+    isConscious = play.isConscious,
+    passivePerception = derived.passivePerception,
+    carryingCapacity = derived.carryingCapacity,
+    savingThrows = [ abilityShort(a) for a <- rules.savingThrows ],
+    backgroundSkills = [ skillName(s) for s <- rules.skillProficiencies ],
+    backgroundTools = [ toolName(t) for t <- rules.toolProficiencies ],
+    skillBonuses = allSkillBonuses(character, rules),
+    equippedArmor = armorName(armor),
+    equipment = equipmentNames(build.loadout),
+    weapons = equippedWeaponViews(character, rules),
+    traits = projectedTraitViews(character, rules),
+    feats = projectedFeatViews(rules),
+    bonuses = ruleBonusViews(rules),
+    notes = state.notes
+  );
+}

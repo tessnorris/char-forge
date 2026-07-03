@@ -1,0 +1,365 @@
+// Character Forge pure build/edit operations
+//
+// These functions change the durable character choices. They do not touch
+// session/play state, and they do not store derived values. After using one of
+// these helpers, callers should recompute rules/projections from the new build.
+
+import * from "./abilities";
+import * from "./character";
+
+export function withBuild(character, build) {
+  Character(
+    build = build,
+    state = character.state
+  );
+}
+
+export function replaceBuild(character, identity, species, speciesOptions, class, classOptions, background, level, scores, loadout, copper) {
+  withBuild(
+    character,
+    CharacterBuild(
+      identity = identity,
+      species = species,
+      speciesOptions = speciesOptions,
+      class = class,
+      classOptions = classOptions,
+      background = background,
+      level = level,
+      scores = scores,
+      loadout = loadout,
+      copper = copper
+    )
+  );
+}
+
+export function setName(character, name) {
+  let build = character.build;
+  let identity = Identity(
+    name = name,
+    playerName = build.identity.playerName,
+    gender = build.identity.gender
+  );
+  replaceBuild(character, identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function setPlayerName(character, playerName) {
+  let build = character.build;
+  let identity = Identity(
+    name = build.identity.name,
+    playerName = playerName,
+    gender = build.identity.gender
+  );
+  replaceBuild(character, identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+
+export function setGender(character, gender) {
+  let build = character.build;
+  let identity = Identity(
+    name = build.identity.name,
+    playerName = build.identity.playerName,
+    gender = gender
+  );
+  replaceBuild(character, identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function setSpecies(character, species) {
+  let build = character.build;
+  replaceBuild(character, build.identity, species, defaultSpeciesOptions(species), build.class, build.classOptions, build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function withSpeciesOptions(character, options) {
+  let build = character.build;
+  replaceBuild(character, build.identity, build.species, options, build.class, build.classOptions, build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function setDragonbornAncestry(character, ancestry) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = ancestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setElfLineage(character, lineage) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = lineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setElfBonusSkill(character, skill) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = skill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setGnomeLineage(character, lineage) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = lineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setGoliathAncestry(character, ancestry) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = ancestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setHumanBonusSkill(character, skill) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = skill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setHumanBonusFeat(character, feat) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = feat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setTieflingLineage(character, lineage) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = lineage, lineageSpellcastingAbility = o.lineageSpellcastingAbility));
+}
+
+export function setLineageSpellcastingAbility(character, abilityId) {
+  let o = character.build.speciesOptions;
+  withSpeciesOptions(character, SpeciesOptions(dragonbornAncestry = o.dragonbornAncestry, elfLineage = o.elfLineage, elfBonusSkill = o.elfBonusSkill, gnomeLineage = o.gnomeLineage, goliathAncestry = o.goliathAncestry, humanBonusSkill = o.humanBonusSkill, humanBonusFeat = o.humanBonusFeat, tieflingLineage = o.tieflingLineage, lineageSpellcastingAbility = abilityId));
+}
+
+export function setClass(character, class) {
+  let build = character.build;
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, class, defaultClassOptions(class), build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function withClassOptions(character, options) {
+  let build = character.build;
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, build.class, options, build.background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function hasSelectedClassSkill(skill, skills) {
+  length(filter(fn s => s == skill, skills)) > 0;
+}
+
+export function removeClassSkill(skill, skills) {
+  filter(fn s => s != skill, skills);
+}
+
+export function classOptionsWithSkills(options, skills) {
+  ClassOptions(classSkills = skills, fightingStyle = options.fightingStyle, clericOrder = options.clericOrder, druidOrder = options.druidOrder, expertiseSkillOne = options.expertiseSkillOne, expertiseSkillTwo = options.expertiseSkillTwo);
+}
+
+export function toggleClassSkill(character, skill) {
+  let build = character.build;
+  let options = build.classOptions;
+  let selected = options.classSkills;
+  if hasSelectedClassSkill(skill, selected) then
+    withClassOptions(character, classOptionsWithSkills(options, removeClassSkill(skill, selected)))
+  else if length(selected) < classSkillChoiceCount(build.class) then
+    withClassOptions(character, classOptionsWithSkills(options, selected + [skill]))
+  else
+    character;
+}
+
+export function setFightingStyle(character, style) {
+  let o = character.build.classOptions;
+  withClassOptions(character, ClassOptions(classSkills = o.classSkills, fightingStyle = style, clericOrder = o.clericOrder, druidOrder = o.druidOrder, expertiseSkillOne = o.expertiseSkillOne, expertiseSkillTwo = o.expertiseSkillTwo));
+}
+
+export function setClericOrder(character, order) {
+  let o = character.build.classOptions;
+  withClassOptions(character, ClassOptions(classSkills = o.classSkills, fightingStyle = o.fightingStyle, clericOrder = order, druidOrder = o.druidOrder, expertiseSkillOne = o.expertiseSkillOne, expertiseSkillTwo = o.expertiseSkillTwo));
+}
+
+export function setDruidOrder(character, order) {
+  let o = character.build.classOptions;
+  withClassOptions(character, ClassOptions(classSkills = o.classSkills, fightingStyle = o.fightingStyle, clericOrder = o.clericOrder, druidOrder = order, expertiseSkillOne = o.expertiseSkillOne, expertiseSkillTwo = o.expertiseSkillTwo));
+}
+
+export function setExpertiseSkillOne(character, skill) {
+  let o = character.build.classOptions;
+  withClassOptions(character, ClassOptions(classSkills = o.classSkills, fightingStyle = o.fightingStyle, clericOrder = o.clericOrder, druidOrder = o.druidOrder, expertiseSkillOne = skill, expertiseSkillTwo = o.expertiseSkillTwo));
+}
+
+export function setExpertiseSkillTwo(character, skill) {
+  let o = character.build.classOptions;
+  withClassOptions(character, ClassOptions(classSkills = o.classSkills, fightingStyle = o.fightingStyle, clericOrder = o.clericOrder, druidOrder = o.druidOrder, expertiseSkillOne = o.expertiseSkillOne, expertiseSkillTwo = skill));
+}
+
+export function setBackground(character, background) {
+  let build = character.build;
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, build.class, build.classOptions, background, build.level, build.scores, build.loadout, build.copper);
+}
+
+export function setLevel(character, level) {
+  let build = character.build;
+  let cleanLevel = clampLevel(level);
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, cleanLevel, build.scores, build.loadout, build.copper);
+}
+
+export function clampLevel(level) {
+  if level < 1 then
+    1
+  else if level > 20 then
+    20
+  else
+    level;
+}
+
+export function setAbilityScore(character, ability, score) {
+  let build = character.build;
+  let scores = setScore(build.scores, ability, score);
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, build.level, scores, build.loadout, build.copper);
+}
+
+export function setCopper(character, copper) {
+  let build = character.build;
+  let cleanCopper = copper < 0 ? 0 : copper;
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, build.level, build.scores, build.loadout, cleanCopper);
+}
+
+export function setLoadout(character, loadout) {
+  let build = character.build;
+  replaceBuild(character, build.identity, build.species, build.speciesOptions, build.class, build.classOptions, build.background, build.level, build.scores, loadout, build.copper);
+}
+
+export function equipWeapon(character, weapon) {
+  let build = character.build;
+  let loadout = build.loadout;
+  let weapons = hasWeaponInList(weapon, loadout.weapons) ? loadout.weapons : loadout.weapons + [weapon];
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = weapons,
+      armor = loadout.armor,
+      tools = loadout.tools,
+      gear = loadout.gear,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function unequipWeapon(character, weapon) {
+  let build = character.build;
+  let loadout = build.loadout;
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = filter(fn w => w != weapon, loadout.weapons),
+      armor = loadout.armor,
+      tools = loadout.tools,
+      gear = loadout.gear,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function equipArmor(character, armor) {
+  let build = character.build;
+  let loadout = build.loadout;
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = [armor],
+      tools = loadout.tools,
+      gear = loadout.gear,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function clearArmor(character) {
+  let build = character.build;
+  let loadout = build.loadout;
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = [],
+      tools = loadout.tools,
+      gear = loadout.gear,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function setShield(character, hasShield) {
+  let build = character.build;
+  let loadout = build.loadout;
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = loadout.armor,
+      tools = loadout.tools,
+      gear = loadout.gear,
+      hasShield = hasShield
+    )
+  );
+}
+
+export function addTool(character, tool) {
+  let build = character.build;
+  let loadout = build.loadout;
+  let tools = hasTool(tool, loadout.tools) ? loadout.tools : loadout.tools + [tool];
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = loadout.armor,
+      tools = tools,
+      gear = loadout.gear,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function removeTool(character, tool) {
+  let build = character.build;
+  let loadout = build.loadout;
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = loadout.armor,
+      tools = filter(fn t => t != tool, loadout.tools),
+      gear = loadout.gear,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function addGear(character, gear) {
+  let build = character.build;
+  let loadout = build.loadout;
+  let gearList = hasGear(gear, loadout.gear) ? loadout.gear : loadout.gear + [gear];
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = loadout.armor,
+      tools = loadout.tools,
+      gear = gearList,
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function removeGear(character, gear) {
+  let build = character.build;
+  let loadout = build.loadout;
+  setLoadout(
+    character,
+    EquipmentLoadout(
+      weapons = loadout.weapons,
+      armor = loadout.armor,
+      tools = loadout.tools,
+      gear = filter(fn g => g != gear, loadout.gear),
+      hasShield = loadout.hasShield
+    )
+  );
+}
+
+export function hasWeaponInList(weapon, weapons) {
+  length(filter(fn w => w == weapon, weapons)) > 0;
+}
+
+export function hasTool(tool, tools) {
+  length(filter(fn t => t == tool, tools)) > 0;
+}
+
+export function hasGear(gear, gearList) {
+  length(filter(fn g => g == gear, gearList)) > 0;
+}
